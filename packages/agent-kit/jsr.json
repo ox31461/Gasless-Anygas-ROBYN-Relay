@@ -1,0 +1,8 @@
+{
+  "name": "@robyn/agent-kit",
+  "version": "1.0.0",
+  "exports": "./index.js",
+  "publish": {
+    "include": ["index.js", "README.md", "LICENSE", "NOTICE", "jsr.json"]
+  }
+}

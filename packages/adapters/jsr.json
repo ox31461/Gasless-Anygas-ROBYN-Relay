@@ -1,0 +1,14 @@
+{
+  "name": "@robyn/adapters",
+  "version": "1.0.0",
+  "exports": {
+    "./core": "./core.mjs",
+    "./ai-sdk": "./ai-sdk.mjs",
+    "./langchain": "./langchain.mjs",
+    "./agentkit": "./agentkit.mjs",
+    "./schemas": "./schemas.mjs"
+  },
+  "publish": {
+    "include": ["core.mjs", "ai-sdk.mjs", "langchain.mjs", "agentkit.mjs", "schemas.mjs", "README.md", "LICENSE", "NOTICE", "jsr.json"]
+  }
+}

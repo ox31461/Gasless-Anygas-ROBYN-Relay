@@ -1,0 +1,8 @@
+{
+  "name": "@robyn/mcp",
+  "version": "1.0.0",
+  "exports": "./index.mjs",
+  "publish": {
+    "include": ["index.mjs", "README.md", "LICENSE", "NOTICE", "jsr.json"]
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "name": "robyn-adapters",
+  "version": "1.0.0",
+  "description": "Robyn framework adapters — gasless cross-chain tools for Vercel AI SDK, LangChain, Coinbase AgentKit, and raw OpenAI/Anthropic function-calling.",
+  "type": "module",
+  "exports": {
+    "./core": "./core.mjs",
+    "./ai-sdk": "./ai-sdk.mjs",
+    "./langchain": "./langchain.mjs",
+    "./agentkit": "./agentkit.mjs",
+    "./schemas": "./schemas.mjs"
+  },
+  "files": [
+    "core.mjs",
+    "ai-sdk.mjs",
+    "langchain.mjs",
+    "agentkit.mjs",
+    "schemas.mjs",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "robyn",
+    "gasless",
+    "cross-chain",
+    "ai-agents",
+    "vercel-ai-sdk",
+    "langchain",
+    "agentkit",
+    "openai",
+    "anthropic",
+    "tools",
+    "web3",
+    "stellar",
+    "evm"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.17.0",
+    "zod": "^3.25.76"
+  },
+  "peerDependencies": {
+    "@coinbase/agentkit": ">=0.1",
+    "@langchain/core": ">=0.3",
+    "ai": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    },
+    "@langchain/core": {
+      "optional": true
+    },
+    "@coinbase/agentkit": {
+      "optional": true
+    }
+  },
+  "author": "Robyn",
+  "homepage": "https://claude.ai/code/artifact/cb28d113-063e-4ddb-8e71-165490eb4fff",
+  "publishConfig": {
+    "access": "public"
+  }
+}

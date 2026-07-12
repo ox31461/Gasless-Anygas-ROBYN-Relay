@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Lockfiles (packages publish to JSR; lockfiles are not part of the repo)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Secrets & keys — NEVER commit
+.env
+.env.*
+*.env
+robyn.env
+keys.json
+*keys.json
+*.key
+*.pem
+*-keys.json
+mnemonic*.txt
+
+# Logs
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,41 @@
+{
+  "name": "robyn-mcp",
+  "version": "1.0.0",
+  "description": "Robyn MCP server — gasless cross-chain for AI agents. Quote and execute gasless moves across 22 EVM chains + Stellar, one signature, no native gas.",
+  "type": "module",
+  "bin": {
+    "robyn-mcp": "index.mjs"
+  },
+  "main": "index.mjs",
+  "files": [
+    "index.mjs",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "gasless",
+    "cross-chain",
+    "ai-agents",
+    "robyn",
+    "web3",
+    "stellar",
+    "evm"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ethers": "^6.13.0",
+    "zod": "^3.23.0"
+  },
+  "author": "Robyn",
+  "homepage": "https://claude.ai/code/artifact/cb28d113-063e-4ddb-8e71-165490eb4fff",
+  "publishConfig": {
+    "access": "public"
+  }
+}

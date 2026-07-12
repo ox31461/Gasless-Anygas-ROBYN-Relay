@@ -1,0 +1,16 @@
+ROBYN — INTEGRATE, DON'T REPLICATE
+==================================
+
+You are FREE to integrate Robyn into your application, agent, or product.
+This package is an open (MIT) CLIENT library for building ON TOP OF the Robyn
+service — use it, ship it, and sell your product built with it, no restrictions.
+
+Scope of this license: the MIT license in this package covers ONLY this client
+library. It does NOT include, and grants NO right to, the Robyn relayer service,
+the Robyn smart contracts, or the Robyn network — all of which are proprietary
+and separately owned. You may not use this library (or reverse-engineer the
+Robyn API) to operate a competing gasless-relay service, or to replicate or
+re-host Robyn's infrastructure. Use of the hosted Robyn API is governed by
+Robyn's Terms of Service.
+
+Short version:  Build WITH Robyn — yes.  Clone Robyn to cut it out — no.
