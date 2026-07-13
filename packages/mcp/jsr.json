@@ -1,8 +1,14 @@
 {
   "name": "@robyn/mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "exports": "./index.mjs",
   "publish": {
-    "include": ["index.mjs", "README.md", "LICENSE", "NOTICE", "jsr.json"]
+    "include": [
+      "index.mjs",
+      "README.md",
+      "LICENSE",
+      "NOTICE",
+      "jsr.json"
+    ]
   }
 }

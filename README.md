@@ -14,7 +14,7 @@ npx jsr add @robyn/agent-kit
 ```js
 import { RobynAgent } from '@robyn/agent-kit';
 
-const agent = new RobynAgent({ signer, svc: 'https://<your-robyn-gateway>/svc' });
+const agent = new RobynAgent({ signer, svc: 'https://api.anygas.xyz/svc' });
 
 // Move value across chains — one signature, zero gas on either side.
 const { id } = await agent.crossChain({
@@ -86,7 +86,7 @@ npx jsr add @robyn/mcp
       "command": "npx",
       "args": ["-y", "robyn-mcp"],
       "env": {
-        "ROBYN_SVC": "https://<your-robyn-gateway>/svc",
+        "ROBYN_SVC": "https://api.anygas.xyz/svc",
         "ROBYN_SIGNER_KEY": "0x…"   // optional — omit for a safe read-only server
       }
     }

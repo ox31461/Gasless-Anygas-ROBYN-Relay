@@ -1,6 +1,6 @@
 {
   "name": "robyn-adapters",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Robyn framework adapters — gasless cross-chain tools for Vercel AI SDK, LangChain, Coinbase AgentKit, and raw OpenAI/Anthropic function-calling.",
   "type": "module",
   "exports": {

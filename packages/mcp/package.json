@@ -1,6 +1,6 @@
 {
   "name": "robyn-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Robyn MCP server — gasless cross-chain for AI agents. Quote and execute gasless moves across 22 EVM chains + Stellar, one signature, no native gas.",
   "type": "module",
   "bin": {

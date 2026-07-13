@@ -5,7 +5,7 @@
 // Built on Gasless Pay v1/v2/v3 + the Robyn Router (cross-chain). ethers v6. MIT.
 //
 //   import { RobynAgent } from './robyn-agent-kit.js';
-//   const agent = new RobynAgent({ signer, svc: 'https://your-robyn/svc' });
+//   const agent = new RobynAgent({ signer, svc: 'https://api.anygas.xyz/svc' });
 //   await agent.pay({ token: USDG, to: merchant, amount: 25_000000n });          // gasless transfer
 //   await agent.payAny({ token: ANY, to, amount, verifiedAsset: USDG });          // pay in ANY verified-swappable token
 //   await agent.buy({ token: USDG, amount, target: market, calldata });           // gasless purchase via an allowlisted venue
@@ -41,7 +41,7 @@ const strBig = (o) => JSON.parse(JSON.stringify(o, (_k, v) => (typeof v === 'big
 const POST = async (url, b) => { const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(strBig(b)) }); return r.json(); };
 
 export class RobynAgent {
-  constructor({ signer, svc, permitVersion = '1' }) { this.signer = signer; this.svc = svc.replace(/\/$/, ''); this.permitVersion = permitVersion; this._info = null; this._route = null; }
+  constructor({ signer, svc = 'https://api.anygas.xyz/svc', permitVersion = '1' }) { this.signer = signer; this.svc = svc.replace(/\/$/, ''); this.permitVersion = permitVersion; this._info = null; this._route = null; }
 
   async chains() { return (await this.info()).gaslessChains || {}; }
   async info() { if (!this._info) this._info = await (await fetch(`${this.svc}/api/gasless/info`)).json(); return this._info; }

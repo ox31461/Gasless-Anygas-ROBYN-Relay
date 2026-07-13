@@ -11,7 +11,7 @@ npm i robyn-agent-kit ethers
 ```js
 import { RobynAgent } from 'robyn-agent-kit';
 
-const agent = new RobynAgent({ signer, svc: 'https://<your-robyn-gateway>/svc' });
+const agent = new RobynAgent({ signer, svc: 'https://api.anygas.xyz/svc' });
 
 // gasless payment in any verified token
 await agent.payAny({ token: ANY, to: merchant, amount, verifiedAsset: USDG });

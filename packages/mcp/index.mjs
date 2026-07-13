@@ -9,7 +9,7 @@
 // Configure (e.g. Claude Desktop mcpServers):
 //   command: "npx", args: ["-y", "robyn-mcp"]
 //   env: {
-//     ROBYN_SVC:        "https://<your-robyn-gateway>/svc",   // the Robyn service base URL
+//     ROBYN_SVC:        "https://api.anygas.xyz/svc",   // the Robyn service base URL
 //     ROBYN_SIGNER_KEY: "0x…"                                  // OPTIONAL — omit for read-only
 //   }
 // One-time per (token, chain) before executing: the signer must approve Permit2 to spend the
@@ -19,7 +19,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ethers } from 'ethers';
 
-const SVC = (process.env.ROBYN_SVC || 'https://robyn.example/svc').replace(/\/$/, '');
+const SVC = (process.env.ROBYN_SVC || 'https://api.anygas.xyz/svc').replace(/\/$/, '');
 const KEY = process.env.ROBYN_SIGNER_KEY || '';
 const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 const P2_TYPES = {

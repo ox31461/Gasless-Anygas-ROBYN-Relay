@@ -26,7 +26,7 @@ Read tools work with **no credentials**. `robyn_cross_chain` only activates when
       "command": "npx",
       "args": ["-y", "robyn-mcp"],
       "env": {
-        "ROBYN_SVC": "https://<your-robyn-gateway>/svc",
+        "ROBYN_SVC": "https://api.anygas.xyz/svc",
         "ROBYN_SIGNER_KEY": "0x…"          // optional — omit for read-only
       }
     }

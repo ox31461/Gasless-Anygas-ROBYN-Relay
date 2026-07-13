@@ -14,7 +14,7 @@ There are three client surfaces — pick one. All are MIT and published on [JSR]
 
 - Node.js **>= 18**.
 - An **ethers v6** `Signer` / `Wallet`. It only ever **signs** — it never sends a transaction or spends gas, so it needs **no native balance**.
-- Your Robyn service base URL (`svc`), e.g. `https://<your-robyn-gateway>/svc`.
+- Your Robyn service base URL (`svc`), e.g. `https://api.anygas.xyz/svc`.
 
 ## The service URL (`svc`)
 
@@ -41,7 +41,7 @@ import { RobynAgent } from '@robyn/agent-kit';
 import { ethers } from 'ethers';
 
 const signer = new ethers.Wallet(PRIVATE_KEY, provider); // needs NO native balance
-const agent  = new RobynAgent({ signer, svc: 'https://<your-robyn-gateway>/svc' });
+const agent  = new RobynAgent({ signer, svc: 'https://api.anygas.xyz/svc' });
 
 // Read the live mesh
 const mesh = await agent.routeInfo();
@@ -83,7 +83,7 @@ npx jsr add @robyn/mcp
       "command": "npx",
       "args": ["-y", "robyn-mcp"],
       "env": {
-        "ROBYN_SVC": "https://<your-robyn-gateway>/svc",
+        "ROBYN_SVC": "https://api.anygas.xyz/svc",
         "ROBYN_SIGNER_KEY": "0x…"   // OPTIONAL — omit for a read-only server
       }
     }

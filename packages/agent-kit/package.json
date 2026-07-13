@@ -1,6 +1,6 @@
 {
   "name": "robyn-agent-kit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Robyn Agent Kit — gasless payments and one-signature cross-chain for AI agents, across 22 EVM chains + Stellar. No native gas, ever.",
   "type": "module",
   "main": "index.js",

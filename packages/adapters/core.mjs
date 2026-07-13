@@ -16,7 +16,7 @@ const strBig = (o) => JSON.parse(JSON.stringify(o, (_, v) => (typeof v === 'bigi
 // robyn({ svc, signer? }) -> { mesh, quote, status, crossChain }
 // - svc:    Robyn service base URL, e.g. "https://<gateway>/svc"
 // - signer: an ethers v6 Signer/Wallet (only needed for crossChain). It signs; it never sends.
-export function robyn({ svc, signer } = {}) {
+export function robyn({ svc = 'https://api.anygas.xyz/svc', signer } = {}) {
   if (!svc) throw new Error('robyn: svc (service base URL) required');
   svc = svc.replace(/\/$/, '');
   const GET = async (p) => (await fetch(svc + p)).json();
