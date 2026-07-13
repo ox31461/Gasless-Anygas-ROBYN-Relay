@@ -1,6 +1,6 @@
 {
-  "name": "@robyn/adapters",
-  "version": "1.0.1",
+  "name": "@anygas/adapters",
+  "version": "1.0.3",
   "exports": {
     "./core": "./core.mjs",
     "./ai-sdk": "./ai-sdk.mjs",

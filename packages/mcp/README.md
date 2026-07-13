@@ -1,4 +1,4 @@
-# robyn-mcp
+# anygas-mcp
 
 > **Integrate, don't replicate.** This package is MIT — integrate Robyn into your app, agent, or product freely, no restrictions. The license covers **only** this client library; Robyn's relayer, smart contracts, and network are **proprietary** and are not licensed here. Don't use it (or the Robyn API) to run a competing gasless-relay service or to replicate Robyn. See [NOTICE](./NOTICE). _Build with Robyn: yes. Clone Robyn to cut it out: no._
 
@@ -24,7 +24,7 @@ Read tools work with **no credentials**. `robyn_cross_chain` only activates when
   "mcpServers": {
     "robyn": {
       "command": "npx",
-      "args": ["-y", "robyn-mcp"],
+      "args": ["-y", "anygas-mcp"],
       "env": {
         "ROBYN_SVC": "https://api.anygas.xyz/svc",
         "ROBYN_SIGNER_KEY": "0x…"          // optional — omit for read-only

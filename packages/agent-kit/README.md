@@ -1,15 +1,15 @@
-# robyn-agent-kit
+# anygas-agent-kit
 
 > **Integrate, don't replicate.** This package is MIT — integrate Robyn into your app, agent, or product freely, no restrictions. The license covers **only** this client library; Robyn's relayer, smart contracts, and network are **proprietary** and are not licensed here. Don't use it (or the Robyn API) to run a competing gasless-relay service or to replicate Robyn. See [NOTICE](./NOTICE). _Build with Robyn: yes. Clone Robyn to cut it out: no._
 
 **Gasless payments and one-signature cross-chain for AI agents.** No native gas, no per-chain balances, no refills — across **22 EVM chains + Stellar**. The agent holds a token and signs intents; Robyn's relayer fronts gas and is repaid from the token.
 
 ```bash
-npm i robyn-agent-kit ethers
+npm i anygas-agent-kit ethers
 ```
 
 ```js
-import { RobynAgent } from 'robyn-agent-kit';
+import { RobynAgent } from 'anygas-agent-kit';
 
 const agent = new RobynAgent({ signer, svc: 'https://api.anygas.xyz/svc' });
 

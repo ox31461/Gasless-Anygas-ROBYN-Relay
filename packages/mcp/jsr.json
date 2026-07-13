@@ -1,6 +1,6 @@
 {
-  "name": "@robyn/mcp",
-  "version": "1.0.1",
+  "name": "@anygas/mcp",
+  "version": "1.0.3",
   "exports": "./index.mjs",
   "publish": {
     "include": [
