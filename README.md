@@ -6,6 +6,9 @@
 [![mcp](https://jsr.io/badges/@robyn/mcp)](https://jsr.io/@robyn/mcp)
 [![adapters](https://jsr.io/badges/@robyn/adapters)](https://jsr.io/@robyn/adapters)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Live](https://img.shields.io/badge/live-api.anygas.xyz-ffb020?logo=lightning)](https://api.anygas.xyz)
+
+> **🔗 Live now — [anygas.xyz](https://api.anygas.xyz)** · [Ask the concierge](https://api.anygas.xyz/svc/api/concierge) · [Live mesh (JSON)](https://api.anygas.xyz/svc/api/route/chains) · [llms.txt](https://api.anygas.xyz/llms.txt)
 
 ```bash
 npx jsr add @robyn/agent-kit
