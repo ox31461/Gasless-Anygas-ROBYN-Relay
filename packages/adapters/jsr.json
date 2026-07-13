@@ -1,6 +1,6 @@
 {
   "name": "@anygas/adapters",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "exports": {
     "./core": "./core.mjs",
     "./ai-sdk": "./ai-sdk.mjs",
@@ -18,7 +18,12 @@
       "README.md",
       "LICENSE",
       "NOTICE",
-      "jsr.json"
+      "jsr.json",
+      "core.d.ts",
+      "ai-sdk.d.ts",
+      "langchain.d.ts",
+      "agentkit.d.ts",
+      "schemas.d.ts"
     ]
   }
 }

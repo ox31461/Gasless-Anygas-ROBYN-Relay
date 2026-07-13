@@ -1,14 +1,29 @@
 {
   "name": "anygas-adapters",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Robyn framework adapters — gasless cross-chain tools for Vercel AI SDK, LangChain, Coinbase AgentKit, and raw OpenAI/Anthropic function-calling.",
   "type": "module",
   "exports": {
-    "./core": "./core.mjs",
-    "./ai-sdk": "./ai-sdk.mjs",
-    "./langchain": "./langchain.mjs",
-    "./agentkit": "./agentkit.mjs",
-    "./schemas": "./schemas.mjs"
+    "./core": {
+      "types": "./core.d.ts",
+      "default": "./core.mjs"
+    },
+    "./ai-sdk": {
+      "types": "./ai-sdk.d.ts",
+      "default": "./ai-sdk.mjs"
+    },
+    "./langchain": {
+      "types": "./langchain.d.ts",
+      "default": "./langchain.mjs"
+    },
+    "./agentkit": {
+      "types": "./agentkit.d.ts",
+      "default": "./agentkit.mjs"
+    },
+    "./schemas": {
+      "types": "./schemas.d.ts",
+      "default": "./schemas.mjs"
+    }
   },
   "files": [
     "core.mjs",
@@ -18,7 +33,12 @@
     "schemas.mjs",
     "README.md",
     "LICENSE",
-    "NOTICE"
+    "NOTICE",
+    "core.d.ts",
+    "schemas.d.ts",
+    "ai-sdk.d.ts",
+    "langchain.d.ts",
+    "agentkit.d.ts"
   ],
   "engines": {
     "node": ">=18"
