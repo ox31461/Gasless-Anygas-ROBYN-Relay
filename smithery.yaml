@@ -1,0 +1,34 @@
+# Smithery configuration: https://smithery.ai/docs/build/project-config/smithery.yaml
+# Robyn AnyGas — gasless cross-chain intent layer for AI agents (22 EVM chains + Stellar).
+# Runs the published npm package `anygas-mcp` over stdio.
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required: []
+    properties:
+      robynSvc:
+        type: string
+        title: Gateway URL (optional)
+        description: Base URL of the Robyn AnyGas gateway. Optional — defaults to https://api.anygas.xyz/svc.
+      robynSignerKey:
+        type: string
+        title: Signer key (optional)
+        description: >-
+          Optional hex private key. If set, the server can sign and submit gasless intents
+          autonomously; if omitted, it returns unsigned intents for the agent/user to sign
+          (safe, read-only). Treat as a secret.
+  commandFunction: |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', 'anygas-mcp'],
+      env: Object.assign(
+        {},
+        config.robynSvc ? { ROBYN_SVC: config.robynSvc } : {},
+        config.robynSignerKey ? { ROBYN_SIGNER_KEY: config.robynSignerKey } : {}
+      )
+    })
+  exampleConfig:
+    robynSvc: https://api.anygas.xyz/svc
+    robynSignerKey: "0x0000000000000000000000000000000000000000000000000000000000000000"
