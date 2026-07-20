@@ -1,7 +1,7 @@
 {
   "name": "anygas-mcp",
-  "version": "1.0.3",
-  "description": "Robyn MCP server — gasless cross-chain for AI agents. Quote and execute gasless moves across 22 EVM chains + Stellar, one signature, no native gas.",
+  "version": "1.1.0",
+  "description": "Robyn MCP server \u2014 gasless cross-chain for AI agents. Quote and execute gasless moves across 22 EVM chains + Stellar, one signature, no native gas.",
   "type": "module",
   "bin": {
     "anygas-mcp": "index.mjs"

@@ -89,6 +89,24 @@ server.registerTool('robyn_cross_chain',
     return text(res);
   });
 
+// ---- non-custodial yield account -------------------------------------------
+server.registerTool('robyn_yield_account',
+  { title: 'Non-custodial yield account', description: 'Your own Aave v3 / Moonwell position (aUSDC/mUSDC) per chain + the capped allowance granted to the relayer + APY (best-yield auto-selected). Pass agent, or omit to use the ROBYN_SIGNER_KEY address.', inputSchema: { agent: z.string().optional() } },
+  async (a) => { const who = a.agent || (KEY ? new ethers.Wallet(KEY).address : null); if (!who) return text('pass agent, or set ROBYN_SIGNER_KEY'); return text(await GET('/api/ncaccount/' + who)); });
+server.registerTool('robyn_yield_quote',
+  { title: 'Quote a spend from yield', description: 'Read-only JIT quote from your yield venue, Aave v3 or Moonwell (draw <= allowance -> withdraw -> gasless deliver).', inputSchema: { srcChain: z.union([z.number(), z.string()]), amount: z.string().describe('USDC base units'), toChain: z.union([z.number(), z.string()]).optional(), toAddress: z.string().optional(), agent: z.string().optional() } },
+  async (a) => { const who = a.agent || (KEY ? new ethers.Wallet(KEY).address : null); if (!who) return text('pass agent, or set ROBYN_SIGNER_KEY'); return text(await POST('/api/ncaccount/quote', { agent: who, srcChain: a.srcChain, amount: a.amount, toChain: a.toChain ?? a.srcChain, toAddress: a.toAddress || who })); });
+server.registerTool('robyn_yield_spend',
+  { title: 'Spend from yield (one signature)', description: 'Spend from your yield (Aave v3 or Moonwell) with ONE EIP-712 signature: Robyn pulls only up to your on-chain aUSDC/mUSDC allowance, unwinds exactly what is needed, and delivers USDC to toAddress on toChain, gaslessly. Requires ROBYN_SIGNER_KEY + a one-time aUSDC/mUSDC allowance to the relayer. The remainder keeps earning interest.', inputSchema: { srcChain: z.union([z.number(), z.string()]), amount: z.string().describe('USDC base units'), toChain: z.union([z.number(), z.string()]).optional(), toAddress: z.string().optional() } },
+  async (a) => {
+    if (!KEY) return text('ROBYN_SIGNER_KEY is not set — this server is read-only.');
+    const w = new ethers.Wallet(KEY); const src = Number(a.srcChain);
+    const intent = { agent: w.address, srcChain: src, amount: String(BigInt(a.amount)), toChain: Number(a.toChain ?? src), toAddress: a.toAddress || w.address, nonce: String(Date.now()) + String(Math.floor(Math.random() * 1e6)), deadline: String(Math.floor(Date.now() / 1000) + 3600) };
+    const types = { Spend: [{ name: 'agent', type: 'address' }, { name: 'srcChain', type: 'uint256' }, { name: 'amount', type: 'uint256' }, { name: 'toChain', type: 'uint256' }, { name: 'toAddress', type: 'address' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' }] };
+    const signature = await w.signTypedData({ name: 'RobynNCAccount', version: '1', chainId: src }, types, intent);
+    return text(await POST('/api/ncaccount/spend', { intent, signature, live: true }));
+  });
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
 console.error('robyn-mcp connected — svc=' + SVC + (KEY ? ' (execute enabled)' : ' (read-only)'));

@@ -147,4 +147,43 @@ export class RobynAgent {
       permit2: { owner: user, permitted: { token: fromToken, amount }, nonce, deadline, signature },
     });
   }
+
+  // ===================================================================
+  // AnyGas Account (NON-CUSTODIAL yield). Keep your USDC in YOUR wallet, supplied to the best of Aave v3 + Moonwell
+  // (you hold aUSDC/mUSDC; we never touch your key). Grant the relayer a capped allowance ONCE
+  // (your on-chain risk budget, revocable anytime). Then every spend is a SINGLE EIP-712 signature.
+  //   const a = await agent.yieldAccount();
+  //   await agent.approveYield({ chainId: 8453, budget: 100_000000n });
+  //   await agent.yieldSpend({ srcChain: 8453, amount: 5_000000n, toChain: 42161, toAddress });
+  // ===================================================================
+  async yieldAccount(agent) { agent = agent || await this._user(); return (await fetch(`${this.svc}/api/ncaccount/${agent}`)).json(); }
+  async yieldQuote({ srcChain, amount, toChain, toAddress }) {
+    return POST(`${this.svc}/api/ncaccount/quote`, { agent: await this._user(), srcChain: Number(srcChain), amount: String(BigInt(amount)), toChain: Number(toChain ?? srcChain), toAddress: toAddress || (await this._user()) });
+  }
+  async approveYield({ chainId, budget }) {
+    const acct = await this.yieldAccount();
+    const pos = (acct.positions || []).find((p) => Number(p.chainId) === Number(chainId));
+    if (!pos) throw new Error('no yield position on chain ' + chainId + ' - supply USDC to Aave v3 or Moonwell in your wallet first');
+    const at = new ethers.Contract(pos.aToken, ['function approve(address,uint256) returns (bool)'], this.signer);
+    return at.approve(acct.relayer, BigInt(budget));
+  }
+  async yieldSpend({ srcChain, amount, toChain, toAddress }) {
+    const me = await this._user();
+    const intent = { agent: me, srcChain: Number(srcChain), amount: String(BigInt(amount)), toChain: Number(toChain ?? srcChain), toAddress: toAddress || me, nonce: String(Date.now()) + String(Math.floor(Math.random() * 1e6)), deadline: String(Math.floor(Date.now() / 1000) + 3600) };
+    const domain = { name: 'RobynNCAccount', version: '1', chainId: Number(srcChain) };
+    const types = { Spend: [{ name: 'agent', type: 'address' }, { name: 'srcChain', type: 'uint256' }, { name: 'amount', type: 'uint256' }, { name: 'toChain', type: 'uint256' }, { name: 'toAddress', type: 'address' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' }] };
+    const signature = await this.signer.signTypedData(domain, types, intent);
+    return POST(`${this.svc}/api/ncaccount/spend`, { intent, signature, live: true });
+  }
+
+  // One call for everything: auto-picks your source (yield position vs idle balance) and delivers
+  // `amount` USDC to `to` on `chain`, gaslessly. srcChain defaults to chain. Lowest-friction spend.
+  async spend({ to, amount, chain, srcChain }) {
+    const src = Number(srcChain || chain);
+    const need = BigInt(amount);
+    const acct = await this.yieldAccount().catch(() => null);
+    const pos = acct && (acct.positions || []).find((p) => Number(p.chainId) === src && BigInt(Math.round((p.earningUsd || 0) * 1e6)) >= need);
+    if (pos) return this.yieldSpend({ srcChain: src, amount, toChain: chain, toAddress: to });
+    return this.crossChain({ fromChain: src, fromToken: "USDC", amount: String(need), toChain: chain, toToken: "USDC", toAddress: to });
+  }
 }

@@ -128,4 +128,13 @@ export declare class RobynAgent {
 
   /** Move value across chains gaslessly with one Permit2 signature. Returns { id, srcTx, track }. */
   crossChain(params: CrossChainParams): Promise<unknown>;
+
+  /** Non-custodial yield account: aUSDC per chain + allowance granted to the relayer + APY. */
+  yieldAccount(agent?: string): Promise<any>;
+  /** Read-only JIT quote for a spend from your Aave yield. */
+  yieldQuote(a: { srcChain: number | string; amount: bigint | string; toChain?: number | string; toAddress?: string }): Promise<any>;
+  /** One-time: approve the relayer to pull your aUSDC up to `budget` (your on-chain cap; revoke with 0). */
+  approveYield(a: { chainId: number | string; budget: bigint | string }): Promise<any>;
+  /** Spend from your yield with one EIP-712 signature; delivers USDC to toAddress on toChain, gaslessly. */
+  yieldSpend(a: { srcChain: number | string; amount: bigint | string; toChain?: number | string; toAddress?: string }): Promise<any>;
 }

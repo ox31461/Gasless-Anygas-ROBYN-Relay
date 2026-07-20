@@ -1,7 +1,7 @@
 {
   "name": "anygas-agent-kit",
-  "version": "1.0.4",
-  "description": "Robyn Agent Kit — gasless payments and one-signature cross-chain for AI agents, across 22 EVM chains + Stellar. No native gas, ever.",
+  "version": "1.1.0",
+  "description": "Robyn Agent Kit \u2014 gasless payments and one-signature cross-chain for AI agents, across 22 EVM chains + Stellar. No native gas, ever.",
   "type": "module",
   "main": "index.js",
   "module": "index.js",
