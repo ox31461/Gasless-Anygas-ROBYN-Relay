@@ -15,6 +15,7 @@
 // One-time per (token, chain) before executing: the signer must approve Permit2 to spend the
 // token — a standard, single ERC-20 approval:  token.approve(0x000000000022D473030F116dDEE9F6B43aC78BA3, MaxUint256)
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { createRequire } from 'node:module';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { ethers } from 'ethers';
@@ -33,7 +34,8 @@ const GET = async (p) => (await fetch(SVC + p)).json();
 const POST = async (p, b) => (await fetch(SVC + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(strBig(b)) })).json();
 const text = (o) => ({ content: [{ type: 'text', text: typeof o === 'string' ? o : JSON.stringify(o, null, 2) }] });
 
-const server = new McpServer({ name: 'robyn', version: '1.0.0' });
+const { version: PKG_VERSION } = createRequire(import.meta.url)('./package.json');
+const server = new McpServer({ name: 'robyn', version: PKG_VERSION });
 
 // ---- read tools (no credentials) -------------------------------------------
 server.registerTool('robyn_mesh',
