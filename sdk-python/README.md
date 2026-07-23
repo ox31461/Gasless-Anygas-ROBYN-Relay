@@ -8,7 +8,7 @@ from anygas import AnyGas
 
 ag = AnyGas()                       # public API, no key needed to quote
 print(ag.chains())                  # supported gasless chains
-q = ag.quote(src_chain=8453, dst_chain=42161, amount_usd=5)
+q = ag.quote(from_chain=8453, to_chain=42161, amount=5)
 print(q)
 
 # Non-custodial yield account: hold mUSDC/aUSDC, spend as any gas token.
