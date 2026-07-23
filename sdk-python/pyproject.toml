@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anygas"
+version = "0.1.0"
+description = "AnyGas Python SDK — gasless cross-chain routing + yield-native gasless spending for AI agents (26 networks)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Robyn" }]
+requires-python = ">=3.9"
+dependencies = ["requests>=2.28"]
+
+[project.optional-dependencies]
+signing = ["eth-account>=0.10"]
+langchain = ["langchain-core>=0.1"]
+
+[project.urls]
+Homepage = "https://anygas.xyz"
+Documentation = "https://anygas.xyz/llms.txt"
+Repository = "https://github.com/ox31461/Gasless-Anygas-ROBYN-Relay"
+
+[tool.setuptools.packages.find]
+where = ["src"]
