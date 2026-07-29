@@ -77,6 +77,59 @@ export interface RouteParams {
   slippage?: number | string;
 }
 
+/** Parameters for the one-call agent entry point (`agentDo`). */
+export interface AgentDoParams {
+  /** Plain-language instruction, e.g. "send 25 USDC to 0xRecipient on arbitrum". */
+  intent?: string;
+  fromChain?: ChainId;
+  toChain?: ChainId;
+  /** Token symbol, e.g. "USDC". */
+  token?: string;
+  /** Human units, e.g. 25 for 25 USDC. */
+  amountHuman?: number;
+  /** Base units; overrides `amountHuman`. */
+  amount?: Amount;
+  toAddress?: string;
+  /** Run the identical path with no funds and nothing broadcast. */
+  sandbox?: boolean;
+}
+
+/** The EIP-712 payload to sign when `status` is `"sign"`. */
+export interface AgentDoSignRequest {
+  mode: 'permit2';
+  chainId: number;
+  /** Address your Permit2 approval must authorise (the relayer). */
+  spender: string;
+  /** Canonical Permit2 contract. */
+  permit2Contract: string;
+  /** ERC-20 being permitted. */
+  tokenAddress: string | null;
+  amount: Amount;
+  what: string;
+  submitTo: string;
+  submitBody: Record<string, unknown>;
+  /** Typed-data to sign: domain, types, primaryType, value. */
+  eip712: Record<string, unknown> | null;
+  idempotency: string;
+}
+
+/** Result of `agentDo`. Branch on `status`; on failure branch on `errorCode`, never message text. */
+export interface AgentDoResult {
+  status?: 'sign' | 'quoted' | 'done';
+  understood?: Record<string, unknown>;
+  rail?: string;
+  receives?: string;
+  durationSec?: number;
+  signRequest?: AgentDoSignRequest;
+  next?: string;
+  warning?: string;
+  /** Present instead of `status` when the request was refused. */
+  errorCode?: string;
+  error?: string;
+  retryable?: boolean;
+  suggestedAction?: string;
+}
+
 /** Parameters for executing a gasless cross-chain move (`crossChain`). */
 export interface CrossChainParams {
   fromChain: ChainId;
@@ -125,6 +178,12 @@ export declare class RobynAgent {
 
   /** Track an in-flight route to DONE by id. */
   routeStatus(id: string): Promise<unknown>;
+
+  /** Params for the one-call entry point (`agentDo`). Supply `intent`, or the structured fields. */
+  agentDo(params?: AgentDoParams): Promise<AgentDoResult>;
+
+  /** The error contract: errorCode -> { http, retryable, retryAfterMs, suggestedAction }. */
+  errors(): Promise<Record<string, unknown>>;
 
   /** Move value across chains gaslessly with one Permit2 signature. Returns { id, srcTx, track }. */
   crossChain(params: CrossChainParams): Promise<unknown>;

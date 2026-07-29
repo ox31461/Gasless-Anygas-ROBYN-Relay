@@ -119,6 +119,29 @@ export class RobynAgent {
   // Track an in-flight route to DONE.
   async routeStatus(id) { return (await fetch(`${this.svc}/api/route/status?id=${encodeURIComponent(id)}`)).json(); }
 
+  /**
+   * One call: intent in, a quoted plan plus the exact payload to sign out.
+   * The documented entry point - no need to model rails, quote, then execute separately.
+   * Pass plain language, or structured fields. `sandbox: true` runs the identical path with no funds.
+   * Returns status 'sign' | 'quoted' | 'done' | 'blocked'; on 'sign', signRequest.eip712 is the
+   * typed-data to sign and signRequest.submitBody/submitTo is where to send it.
+   */
+  async agentDo({ intent, fromChain, toChain, token, amountHuman, amount, toAddress, sandbox } = {}) {
+    const body = {};
+    if (intent !== undefined) body.intent = intent;
+    if (fromChain !== undefined) body.fromChain = fromChain;
+    if (toChain !== undefined) body.toChain = toChain;
+    if (token !== undefined) body.token = token;
+    if (amountHuman !== undefined) body.amountHuman = amountHuman;
+    if (amount !== undefined) body.amount = amount;
+    if (toAddress !== undefined) body.toAddress = toAddress;
+    if (sandbox) body.sandbox = true;
+    return POST(`${this.svc}/api/agent/do`, body);
+  }
+
+  /** The full error contract: every errorCode, whether it is retryable, and the suggested action. */
+  async errors() { return (await fetch(`${this.svc}/api/errors`)).json(); }
+
   // Permit2 SignatureTransfer - one off-chain signature authorizing the relayer to pull `amount`.
   async _permit2Sig({ token, amount, spender, nonce, deadline, chainId }) {
     return this.signer.signTypedData(
