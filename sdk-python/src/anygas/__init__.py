@@ -101,6 +101,51 @@ class AnyGas:
             raise AnyGasError("pass address= or construct AnyGas(private_key=...)")
         return self._get(f"/api/ncaccount/{addr}")
 
+    def agent_do(self, intent: str = None, *, from_chain: int = None, to_chain: int = None,
+                 token: str = None, amount_human: float = None, amount: str = None,
+                 to_address: str = None, sandbox: bool = False) -> dict:
+        """One call: intent in, a quoted plan plus the exact payload to sign out.
+
+        This is the documented entry point. Pass plain language::
+
+            client.agent_do("send 25 USDC to 0xRecipient on arbitrum", from_chain=8453)
+
+        or structured fields. Returns a dict whose ``status`` is one of:
+
+        ``sign``    - ``signRequest`` carries the EIP-712 payload to sign (domain, types, value)
+                      plus ``submitBody``/``submitTo`` for the follow-up call.
+        ``quoted``  - something is still missing (usually ``to_address``).
+        ``done``    - sandbox run completed; nothing moved.
+        ``blocked`` - a typed error; branch on ``errorCode``, never on the message text.
+
+        Set ``sandbox=True`` to run the identical path with no funds and nothing broadcast.
+        """
+        body = {}
+        if intent is not None:
+            body["intent"] = intent
+        if from_chain is not None:
+            body["fromChain"] = from_chain
+        if to_chain is not None:
+            body["toChain"] = to_chain
+        if token is not None:
+            body["token"] = token
+        if amount_human is not None:
+            body["amountHuman"] = amount_human
+        if amount is not None:
+            body["amount"] = amount
+        if to_address is not None:
+            body["toAddress"] = to_address
+        if sandbox:
+            body["sandbox"] = True
+        return self._post("/api/agent/do", body)
+
+    def errors(self) -> dict:
+        """The full error contract: every errorCode, whether it is retryable, and what to do next.
+
+        Fetch once at integration time and branch on ``errorCode`` rather than parsing messages.
+        """
+        return self._get("/api/errors")
+
     def account_quote(self, src_chain: int, amount_usd: float) -> dict:
         return self._post("/api/ncaccount/quote", {"srcChain": src_chain, "amountUsd": amount_usd})
 
