@@ -91,6 +91,65 @@ server.registerTool('robyn_cross_chain',
     return text(res);
   });
 
+// ---- one-call agent surface -------------------------------------------------
+server.registerTool('robyn_agent_do',
+  { title: 'Plan a gasless action from one intent',
+    description: 'The fastest path from intent to transaction. Send plain language ("send 25 USDC to 0xabc... on arbitrum") or structured fields; returns a quoted plan plus the exact EIP-712 payload to sign. Read-only and needs no key. Set sandbox:true to run the identical path with no funds and nothing broadcast. Branch on status: sign | quoted | done, or on errorCode when refused.',
+    inputSchema: {
+      intent: z.string().optional().describe('plain-language instruction'),
+      fromChain: z.union([z.number(), z.string()]).optional(),
+      toChain: z.union([z.number(), z.string()]).optional(),
+      token: z.string().optional().describe('symbol, e.g. USDC'),
+      amountHuman: z.number().optional().describe('human units, e.g. 25'),
+      amount: z.string().optional().describe('base units; overrides amountHuman'),
+      toAddress: z.string().optional(),
+      sandbox: z.boolean().optional(),
+    } },
+  async (a) => text(await POST('/api/agent/do', a)));
+
+server.registerTool('robyn_errors',
+  { title: 'Error contract',
+    description: 'Every errorCode the API can return, whether it is retryable, how long to wait, and the suggested recovery action. Read once and branch on errorCode instead of parsing messages.',
+    inputSchema: {} },
+  async () => text(await GET('/api/errors')));
+
+server.registerTool('robyn_agent_execute',
+  { title: 'Do it: plan, sign locally, submit (one call)',
+    description: 'End-to-end execution from a single intent. Plans via /api/agent/do, signs the EIP-712 payload the server returns with ROBYN_SIGNER_KEY, and submits it — the relayer fronts all gas. Requires ROBYN_SIGNER_KEY plus a one-time Permit2 approval of the token. Only this local server can do it; the hosted endpoint has no signer. Pass sandbox:true to rehearse with no funds.',
+    inputSchema: {
+      intent: z.string().optional().describe('plain-language instruction'),
+      fromChain: z.union([z.number(), z.string()]).optional(),
+      toChain: z.union([z.number(), z.string()]).optional(),
+      token: z.string().optional(),
+      amountHuman: z.number().optional(),
+      amount: z.string().optional(),
+      toAddress: z.string().optional(),
+      sandbox: z.boolean().optional(),
+    } },
+  async (a) => {
+    if (!KEY) return text('ROBYN_SIGNER_KEY is not set — this server is read-only. Use robyn_agent_do to plan, or set the key to execute.');
+    const w = new ethers.Wallet(KEY);
+    const plan = await POST('/api/agent/do', { ...a, toAddress: a.toAddress || w.address });
+    if (plan && plan.errorCode) return text(plan);                 // typed refusal: hand it back as-is
+    if (plan && plan.status === 'done') return text(plan);          // sandbox completed, nothing to sign
+    const sr = plan && plan.signRequest;
+    if (!sr || !sr.eip712) return text({ note: 'nothing to sign — plan did not reach a signable state', plan });
+    // Sign the payload the SERVER returned. It already binds spender to the relayer that calls
+    // permitTransferFrom; re-deriving these fields locally is how permits become unredeemable.
+    const v = sr.eip712.value;
+    const signature = await w.signTypedData(sr.eip712.domain, P2_TYPES, v);
+    const body = {
+      ...sr.submitBody,
+      permit2: { owner: w.address, permitted: v.permitted, nonce: v.nonce, deadline: v.deadline, signature },
+    };
+    const res = await fetch(SVC + '/api/route/execute', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-idempotency-key': 'mcp-' + w.address.slice(2, 10) + '-' + Date.now() },
+      body: JSON.stringify(strBig(body)),
+    }).then((r) => r.json());
+    return text({ planned: { rail: plan.rail, receives: plan.receives, understood: plan.understood }, executed: res });
+  });
+
 // ---- non-custodial yield account -------------------------------------------
 server.registerTool('robyn_yield_account',
   { title: 'Non-custodial yield account', description: 'Your own Aave v3 / Moonwell position (aUSDC/mUSDC) per chain + the capped allowance granted to the relayer + APY (best-yield auto-selected). Pass agent, or omit to use the ROBYN_SIGNER_KEY address.', inputSchema: { agent: z.string().optional() } },
