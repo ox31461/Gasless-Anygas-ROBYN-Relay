@@ -115,7 +115,7 @@ export interface AgentDoSignRequest {
 
 /** Result of `agentDo`. Branch on `status`; on failure branch on `errorCode`, never message text. */
 export interface AgentDoResult {
-  status?: 'sign' | 'quoted' | 'done';
+  status?: 'sign' | 'quoted' | 'done' | 'blocked';
   understood?: Record<string, unknown>;
   rail?: string;
   receives?: string;
@@ -128,6 +128,25 @@ export interface AgentDoResult {
   error?: string;
   retryable?: boolean;
   suggestedAction?: string;
+}
+
+/** Parameters for the one-call USDC spend (`spend`). */
+export interface SpendParams {
+  /** Recipient address on `chain`. */
+  to: string;
+  /** USDC amount in base units (6 decimals). */
+  amount: Amount;
+  /** Destination chain id. */
+  chain: number | string;
+  /** Source chain id. Defaults to `chain`. */
+  srcChain?: number | string;
+  /**
+   * USDC token address on `srcChain`. Required only when the yield position cannot cover the
+   * amount and the spend falls back to a Permit2 `crossChain` move (Permit2 signs the address).
+   */
+  fromToken?: string;
+  /** Destination token address/symbol for the fallback move. Defaults to "USDC". */
+  toToken?: string;
 }
 
 /** Parameters for executing a gasless cross-chain move (`crossChain`). */
@@ -196,4 +215,9 @@ export declare class RobynAgent {
   approveYield(a: { chainId: number | string; budget: bigint | string }): Promise<any>;
   /** Spend from your yield with one EIP-712 signature; delivers USDC to toAddress on toChain, gaslessly. */
   yieldSpend(a: { srcChain: number | string; amount: bigint | string; toChain?: number | string; toAddress?: string }): Promise<any>;
+  /**
+   * One call: deliver `amount` USDC to `to` on `chain`. Spends from the yield position when it covers
+   * the amount, otherwise falls back to a gasless Permit2 `crossChain` move (needs `fromToken`).
+   */
+  spend(params: SpendParams): Promise<any>;
 }

@@ -18,6 +18,9 @@
     "NOTICE",
     "index.d.ts"
   ],
+  "scripts": {
+    "test": "node --test"
+  },
   "engines": {
     "node": ">=18"
   },
