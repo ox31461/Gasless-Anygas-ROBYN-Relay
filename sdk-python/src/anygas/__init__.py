@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 import requests
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 DEFAULT_BASE = "https://anygas.xyz/svc"
 
 _SPEND_TYPES = {

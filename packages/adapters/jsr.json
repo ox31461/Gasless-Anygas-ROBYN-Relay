@@ -1,6 +1,6 @@
 {
   "name": "@anygas/adapters",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "exports": {
     "./core": "./core.mjs",
     "./ai-sdk": "./ai-sdk.mjs",

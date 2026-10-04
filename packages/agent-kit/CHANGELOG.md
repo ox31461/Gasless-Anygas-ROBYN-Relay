@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 - 2026-10-04
 - Fix `payAny()` on a chain other than the service's home chain: the EIP-2612 permit was signed with
   the home `chainId`, so it could never verify on the token's chain. It now uses the payAny chain.
 - Fix `spend()` idle-balance fallback: it passed the symbol "USDC" as the Permit2 token, which ethers
@@ -12,6 +12,8 @@
 - `yieldQuote()` accepts `agent`, so it works read-only without a signer (matching the MCP
   `robyn_yield_quote` tool). Signer-only calls made without a signer now fail with
   `this call needs a signer` instead of a `TypeError`.
+- JSR: `index.d.ts` is now published and wired up with `@ts-self-types`, so JSR consumers get the
+  shipped declarations instead of types inferred from JavaScript.
 
 ## 1.2.0
 - Add `agentDo()` - the one-call entry point. Send a plain-language or structured intent and get back a
