@@ -36,3 +36,8 @@ cd sdk-python && pip install -e ".[test]" && pytest
 ## Reporting issues
 
 Open an issue with a minimal repro: the package + version, the call you made, what you expected, and what happened. For anything security-sensitive, please disclose privately rather than in a public issue.
+
+## Releases
+
+Maintainers: see [RELEASING.md](./RELEASING.md). Releases are tag-triggered (`agent-kit-v*`, `mcp-v*`,
+`adapters-v*`, `python-v*`).

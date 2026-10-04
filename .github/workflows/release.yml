@@ -1,0 +1,171 @@
+# Release: publish one package per tag. See RELEASING.md for one-time setup.
+#
+#   agent-kit-vX.Y.Z  -> packages/agent-kit  -> JSR (@anygas/agent-kit) + npm (anygas-agent-kit)
+#   mcp-vX.Y.Z        -> packages/mcp        -> JSR (@anygas/mcp)       + npm (anygas-mcp)
+#   adapters-vX.Y.Z   -> packages/adapters   -> JSR (@anygas/adapters)
+#   python-vX.Y.Z     -> sdk-python          -> PyPI (anygas)
+#
+# Every job checks that the tag's version matches the package's version files and runs the
+# package's tests before anything is published.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'agent-kit-v*'
+      - 'mcp-v*'
+      - 'adapters-v*'
+      - 'python-v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: Resolve tag
+    runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.tag.outputs.kind }}
+      dir: ${{ steps.tag.outputs.dir }}
+      version: ${{ steps.tag.outputs.version }}
+      npm: ${{ steps.tag.outputs.npm }}
+    steps:
+      - id: tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          case "$TAG" in
+            agent-kit-v*) kind=js;     dir=packages/agent-kit; npm=true;  version="${TAG#agent-kit-v}" ;;
+            mcp-v*)       kind=js;     dir=packages/mcp;       npm=true;  version="${TAG#mcp-v}" ;;
+            # adapters is published to JSR only. To also publish anygas-adapters to npm, set npm=true.
+            adapters-v*)  kind=js;     dir=packages/adapters;  npm=false; version="${TAG#adapters-v}" ;;
+            python-v*)    kind=python; dir=sdk-python;         npm=false; version="${TAG#python-v}" ;;
+            *) echo "::error::Unrecognised release tag '$TAG'"; exit 1 ;;
+          esac
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$TAG' does not end in a semver version (got '$version')"; exit 1
+          fi
+          {
+            echo "kind=$kind"; echo "dir=$dir"; echo "version=$version"; echo "npm=$npm"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing $dir $version ($kind, npm=$npm)"
+
+  js:
+    name: Publish ${{ needs.resolve.outputs.dir }} ${{ needs.resolve.outputs.version }}
+    needs: resolve
+    if: needs.resolve.outputs.kind == 'js'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # JSR OIDC publishing and npm provenance
+    defaults:
+      run:
+        working-directory: ${{ needs.resolve.outputs.dir }}
+    env:
+      VERSION: ${{ needs.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Guard - tag version matches package.json and jsr.json
+        run: |
+          set -euo pipefail
+          pkg=$(node -p "require('./package.json').version")
+          jsr=$(node -p "require('./jsr.json').version")
+          echo "tag=$VERSION package.json=$pkg jsr.json=$jsr"
+          if [ "$pkg" != "$VERSION" ] || [ "$jsr" != "$VERSION" ]; then
+            echo "::error::Tag version $VERSION does not match package.json ($pkg) / jsr.json ($jsr)"
+            exit 1
+          fi
+
+      # No lockfiles are committed (see .gitignore), so install rather than `npm ci`.
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+
+      - name: Dry runs (nothing is published if these fail)
+        run: |
+          set -euo pipefail
+          npm pack --dry-run
+          npx --yes jsr publish --dry-run
+          if [ "${{ needs.resolve.outputs.npm }}" = "true" ]; then
+            npm publish --dry-run --provenance --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to JSR (GitHub OIDC, no secret)
+        run: npx --yes jsr publish
+
+      - name: Publish to npm
+        if: needs.resolve.outputs.npm == 'true'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  python-build:
+    name: Test and build sdk-python ${{ needs.resolve.outputs.version }}
+    needs: resolve
+    if: needs.resolve.outputs.kind == 'python'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk-python
+    env:
+      VERSION: ${{ needs.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Guard - tag version matches pyproject.toml and __version__
+        run: |
+          set -euo pipefail
+          python - <<'EOF'
+          import os, re, sys, tomllib
+          tag = os.environ["VERSION"]
+          proj = tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]
+          src = open("src/anygas/__init__.py").read()
+          m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', src, re.M)
+          mod = m.group(1) if m else None
+          print(f"tag={tag} pyproject.toml={proj} __version__={mod}")
+          if not (tag == proj == mod):
+              print(f"::error::Tag version {tag} does not match pyproject.toml ({proj}) / __version__ ({mod})")
+              sys.exit(1)
+          EOF
+
+      - run: python -m pip install -e ".[test,langchain]" build twine
+      - run: python -m pytest -v
+      - run: python -m build
+      - run: python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: sdk-python/dist/
+          if-no-files-found: error
+
+  python-publish:
+    name: Publish sdk-python to PyPI
+    needs: [resolve, python-build]
+    runs-on: ubuntu-latest
+    # The PyPI trusted publisher must name this repository, workflow file (release.yml) and
+    # environment (pypi).
+    environment:
+      name: pypi
+      url: https://pypi.org/project/anygas/${{ needs.resolve.outputs.version }}/
+    permissions:
+      id-token: write # PyPI trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
