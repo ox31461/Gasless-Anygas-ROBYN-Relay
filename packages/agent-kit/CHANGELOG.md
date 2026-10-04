@@ -9,6 +9,9 @@
 - Non-JSON service responses raise `Robyn service returned non-JSON (HTTP <status>)` instead of a bare
   `SyntaxError`. JSON error bodies (`errorCode`) are still returned as data.
 - Types: declare `spend()` / `SpendParams`; `AgentDoResult.status` includes `'blocked'`.
+- `yieldQuote()` accepts `agent`, so it works read-only without a signer (matching the MCP
+  `robyn_yield_quote` tool). Signer-only calls made without a signer now fail with
+  `this call needs a signer` instead of a `TypeError`.
 
 ## 1.2.0
 - Add `agentDo()` - the one-call entry point. Send a plain-language or structured intent and get back a

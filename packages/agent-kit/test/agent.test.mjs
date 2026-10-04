@@ -224,6 +224,14 @@ describe('non-custodial yield account', () => {
     assert.deepEqual(mock.calls[2].body, { agent: w.address, srcChain: 8453, amount: '5000000', toChain: 8453, toAddress: w.address });
   });
 
+  test('yieldQuote() works read-only with an explicit agent; signer-only calls fail clearly', async () => {
+    mock = mockFetch(() => ({ ok: true }));
+    const a = new RobynAgent({ svc: SVC });
+    await a.yieldQuote({ srcChain: 8453, amount: 5_000000n, agent: MERCHANT });
+    assert.deepEqual(mock.calls[0].body, { agent: MERCHANT, srcChain: 8453, amount: '5000000', toChain: 8453, toAddress: MERCHANT });
+    await assert.rejects(a.yieldQuote({ srcChain: 8453, amount: 1n }), /needs a signer/);
+  });
+
   test('yieldSpend() signs a RobynNCAccount Spend that recovers to the signer', async () => {
     const w = ethers.Wallet.createRandom();
     mock = mockFetch(router(SVC, { 'POST /api/ncaccount/spend': { ok: true } }));

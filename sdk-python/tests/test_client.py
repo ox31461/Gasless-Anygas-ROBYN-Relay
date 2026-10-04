@@ -101,7 +101,27 @@ def test_quote_uses_fromChain_toChain_amount(http):
     assert req.headers["Content-Type"] == "application/json"
     assert http.path() == "/svc/api/route/quote"
     assert http.body() == {"fromChain": 8453, "toChain": 42161, "fromToken": "USDC",
-                           "toToken": "USDC", "amount": 5, "slippage": 0.01}
+                           "toToken": "USDC", "amount": "5000000", "slippage": 0.01}
+
+
+@pytest.mark.parametrize("amount,decimals,base", [
+    (5, 6, "5000000"),             # the README example: 5 USDC, not 5 micro-USDC
+    (1.5, 6, "1500000"),           # fractions are scaled, not rejected by the API
+    ("0.1", 6, "100000"),
+    (0.000001, 6, "1"),
+    (2, 18, "2000000000000000000"),
+    (0.3, 18, "300000000000000000"),  # exact: no float drift
+])
+def test_quote_converts_human_amount_to_base_units(http, amount, decimals, base):
+    AnyGas(BASE).quote(8453, 42161, amount, decimals=decimals)
+    assert http.body()["amount"] == base
+
+
+@pytest.mark.parametrize("bad", [0, -1, 0.0000001])
+def test_quote_rejects_non_positive_amounts(http, bad):
+    with pytest.raises(AnyGasError):
+        AnyGas(BASE).quote(8453, 42161, bad)
+    assert http.calls == []
 
 
 def test_agent_do_only_sends_given_fields(http):

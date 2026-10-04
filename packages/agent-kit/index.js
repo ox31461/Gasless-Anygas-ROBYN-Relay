@@ -52,7 +52,7 @@ export class RobynAgent {
 
   async chains() { return (await this.info()).gaslessChains || {}; }
   async info() { if (!this._info) this._info = await GET(`${this.svc}/api/gasless/info`); return this._info; }
-  async _user() { return this.signer.getAddress(); }
+  async _user() { if (!this.signer) throw new Error('this call needs a signer (construct RobynAgent with { signer })'); return this.signer.getAddress(); }
   _nonce() { return BigInt(Date.now()) * 1000n + BigInt(Math.floor(Math.random() * 1000)); }
   _deadline(secs = 3600) { return BigInt(Math.floor(Date.now() / 1000) + secs); }
 
@@ -188,8 +188,10 @@ export class RobynAgent {
   //   await agent.yieldSpend({ srcChain: 8453, amount: 5_000000n, toChain: 42161, toAddress });
   // ===================================================================
   async yieldAccount(agent) { agent = agent || await this._user(); return GET(`${this.svc}/api/ncaccount/${agent}`); }
-  async yieldQuote({ srcChain, amount, toChain, toAddress }) {
-    return POST(`${this.svc}/api/ncaccount/quote`, { agent: await this._user(), srcChain: Number(srcChain), amount: String(BigInt(amount)), toChain: Number(toChain ?? srcChain), toAddress: toAddress || (await this._user()) });
+  // Read-only: pass `agent` to quote without a signer.
+  async yieldQuote({ srcChain, amount, toChain, toAddress, agent }) {
+    agent = agent || await this._user();
+    return POST(`${this.svc}/api/ncaccount/quote`, { agent, srcChain: Number(srcChain), amount: String(BigInt(amount)), toChain: Number(toChain ?? srcChain), toAddress: toAddress || agent });
   }
   async approveYield({ chainId, budget }) {
     const acct = await this.yieldAccount();
