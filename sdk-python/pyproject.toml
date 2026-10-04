@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "anygas"
 version = "0.2.0"
 description = "AnyGas Python SDK — gasless cross-chain routing + yield-native gasless spending for AI agents (26 networks)"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Robyn" }]
 requires-python = ">=3.9"
 dependencies = ["requests>=2.28"]
