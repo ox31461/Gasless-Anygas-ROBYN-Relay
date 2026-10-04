@@ -12,6 +12,12 @@ const P2_TYPES = {
     { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' } ],
   TokenPermissions: [ { name: 'token', type: 'address' }, { name: 'amount', type: 'uint256' } ] };
 const strBig = (o) => JSON.parse(JSON.stringify(o, (_, v) => (typeof v === 'bigint' ? v.toString() : v)));
+// Parse a service response. JSON error bodies (errorCode/error) are returned as-is so callers can
+// branch on errorCode; a non-JSON body (proxy error page, outage) becomes a clear Error.
+const readJson = async (r) => {
+  const t = await r.text();
+  try { return JSON.parse(t); } catch { throw new Error(`Robyn service returned non-JSON (HTTP ${r.status}): ${t.slice(0, 200)}`); }
+};
 
 // robyn({ svc, signer? }) -> { mesh, quote, status, crossChain }
 // - svc:    Robyn service base URL, e.g. "https://<gateway>/svc"
@@ -19,8 +25,8 @@ const strBig = (o) => JSON.parse(JSON.stringify(o, (_, v) => (typeof v === 'bigi
 export function robyn({ svc = 'https://api.anygas.xyz/svc', signer } = {}) {
   if (!svc) throw new Error('robyn: svc (service base URL) required');
   svc = svc.replace(/\/$/, '');
-  const GET = async (p) => (await fetch(svc + p)).json();
-  const POST = async (p, b) => (await fetch(svc + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(strBig(b)) })).json();
+  const GET = async (p) => readJson(await fetch(svc + p));
+  const POST = async (p, b) => readJson(await fetch(svc + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(strBig(b)) }));
 
   async function crossChain(a) {
     if (!signer) throw new Error('robyn.crossChain: a signer is required');
