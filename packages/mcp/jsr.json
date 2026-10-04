@@ -9,7 +9,8 @@
       "README.md",
       "LICENSE",
       "NOTICE",
-      "jsr.json"
+      "jsr.json",
+      "index.d.ts"
     ]
   }
 }

@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 // Robyn Agent Kit - the one-import way for an AI agent (or any automated system) to operate
 // on Robyn Chain, and every EVM chain Robyn deploys to, with ZERO gas management: no native
 // token, no per-chain balances, no refills. The agent holds a verified asset (WETH/USDG/...)

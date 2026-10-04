@@ -1,3 +1,4 @@
+// @ts-self-types="./langchain.d.ts"
 // robyn-adapters/langchain.mjs — LangChain tools.
 //
 //   import { robynLangchainTools } from 'robyn-adapters/langchain';

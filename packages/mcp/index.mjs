@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-self-types="./index.d.ts"
 // Robyn MCP server — gasless cross-chain for AI agents.
 //
 // Exposes the Robyn Router as Model Context Protocol tools, so any MCP-capable agent (Claude,

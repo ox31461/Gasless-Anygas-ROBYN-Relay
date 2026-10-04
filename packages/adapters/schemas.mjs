@@ -1,3 +1,4 @@
+// @ts-self-types="./schemas.d.ts"
 // robyn-adapters/schemas.mjs — framework-agnostic tool schemas + dispatcher.
 //
 // Works with any function-calling loop: OpenAI tools, Anthropic tool-use, or your own. No

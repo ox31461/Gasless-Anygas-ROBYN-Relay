@@ -1,3 +1,4 @@
+// @ts-self-types="./core.d.ts"
 // robyn-adapters/core.mjs — the shared Robyn client used by every framework adapter.
 //
 // One place for: read (mesh / quote / status) and execute (crossChain via a single Permit2
