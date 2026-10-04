@@ -113,3 +113,22 @@ After the runs are green:
   CONTRIBUTING.md still say `@robyn/*`. `@robyn/*` stopped at 1.0.1. Update the docs to the scope
   you publish under.
 - **sdk-python README** still says "Not on PyPI yet". Update it once the PyPI release is live.
+
+## Downgrade guard, and two packages whose published source lives elsewhere
+
+Every publish job first runs `.github/scripts/no-downgrade.mjs`. It refuses any version that isn't strictly
+newer than what JSR, npm or PyPI already serve, so a stale tag can never move `latest` backwards.
+
+As of 2026-10-04 the guard blocks two packages, and that's deliberate:
+
+| Package | Already published | Where that published code lives |
+|---|---|---|
+| `anygas-mcp` / `@anygas/mcp` | **1.6.0** (87 hosted tools) | `ox31461/nullchat` `master`: `packages/anygas-mcp/`, registry `_box/mcp-tools.mjs` |
+| `anygas` (PyPI) | **1.0.0** (`Robyn` client, `client.py`) | not in this repo; `sdk-python/` here is a different, smaller API |
+
+Don't release `packages/mcp` or `sdk-python` from this repo until whoever owns the code decides between two options:
+
+1. Make the code here the real source of truth: port the published code in, then version above the registry.
+2. Retire these copies: point users at the published packages instead.
+
+`agent-kit` (npm 1.1.0, JSR 1.0.4) and `adapters` (JSR 1.0.4) are behind this repo, so they're safe to release.
