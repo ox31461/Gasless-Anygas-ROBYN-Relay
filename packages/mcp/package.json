@@ -9,10 +9,14 @@
   "main": "index.mjs",
   "files": [
     "index.mjs",
+    "server.mjs",
     "README.md",
     "LICENSE",
     "NOTICE"
   ],
+  "scripts": {
+    "test": "node --test"
+  },
   "engines": {
     "node": ">=18"
   },

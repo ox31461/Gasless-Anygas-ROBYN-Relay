@@ -5,6 +5,7 @@
   "publish": {
     "include": [
       "index.mjs",
+      "server.mjs",
       "README.md",
       "LICENSE",
       "NOTICE",
