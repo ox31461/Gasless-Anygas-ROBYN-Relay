@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0 - 2026-10-04
+- Fix `payAny()` on a chain other than the service's home chain: the EIP-2612 permit was signed with
+  the home `chainId`, so it could never verify on the token's chain. It now uses the payAny chain.
+- Fix `spend()` idle-balance fallback: it passed the symbol "USDC" as the Permit2 token, which ethers
+  cannot sign (it tried to resolve it as an ENS name). Pass `fromToken` (the USDC address on the source
+  chain) for the fallback; without it `spend()` now fails with a clear message.
+- Non-JSON service responses raise `Robyn service returned non-JSON (HTTP <status>)` instead of a bare
+  `SyntaxError`. JSON error bodies (`errorCode`) are still returned as data.
+- Types: declare `spend()` / `SpendParams`; `AgentDoResult.status` includes `'blocked'`.
+- `yieldQuote()` accepts `agent`, so it works read-only without a signer (matching the MCP
+  `robyn_yield_quote` tool). Signer-only calls made without a signer now fail with
+  `this call needs a signer` instead of a `TypeError`.
+- JSR: `index.d.ts` is now published and wired up with `@ts-self-types`, so JSR consumers get the
+  shipped declarations instead of types inferred from JavaScript.
+
 ## 1.2.0
 - Add `agentDo()` - the one-call entry point. Send a plain-language or structured intent and get back a
   quoted plan plus the exact EIP-712 payload to sign (`signRequest.eip712`) and where to submit it.

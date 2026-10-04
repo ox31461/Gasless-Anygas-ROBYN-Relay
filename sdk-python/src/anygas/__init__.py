@@ -5,11 +5,12 @@ Python twin of the anygas-agent-kit npm package. API surface mirrors https://any
 from __future__ import annotations
 
 import time
+from decimal import Decimal, ROUND_DOWN
 from typing import Any, Optional
 
 import requests
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 DEFAULT_BASE = "https://anygas.xyz/svc"
 
 _SPEND_TYPES = {
@@ -27,6 +28,14 @@ _SPEND_TYPES = {
 
 class AnyGasError(RuntimeError):
     pass
+
+
+def _to_base_units(amount: Any, decimals: int) -> str:
+    """Human token amount -> integer base-unit string, exactly (no float rounding drift)."""
+    v = (Decimal(str(amount)) * (Decimal(10) ** decimals)).to_integral_value(rounding=ROUND_DOWN)
+    if v <= 0:
+        raise AnyGasError(f"amount must be positive, got {amount!r}")
+    return str(v)
 
 
 class AnyGas:
@@ -65,7 +74,8 @@ class AnyGas:
         except ValueError as e:
             raise AnyGasError(f"non-JSON response ({r.status_code})") from e
         if r.status_code >= 400:
-            raise AnyGasError(str(j.get("error") or j))
+            msg = j.get("error") if isinstance(j, dict) else None
+            raise AnyGasError(str(msg or j))
         return j
 
     # ---------- discovery / status ----------
@@ -88,11 +98,16 @@ class AnyGas:
         return self._get("/api/route/chains")
 
     def quote(self, from_chain: int, to_chain: int, amount: float,
-              from_token: str = "USDC", to_token: str = "USDC", **kw: Any) -> dict:
-        """Best cross-chain gasless route (best-of-4 bridge aggregators)."""
+              from_token: str = "USDC", to_token: str = "USDC", decimals: int = 6,
+              **kw: Any) -> dict:
+        """Best cross-chain gasless route (best-of-4 bridge aggregators).
+
+        ``amount`` is in human units of ``from_token`` (``5`` = 5 USDC). The API takes base
+        units, so it is scaled by ``decimals`` (6 for USDC/USDT; pass 18 for most other ERC-20s).
+        """
         return self._post("/api/route/quote", {"fromChain": from_chain, "toChain": to_chain,
                                                "fromToken": from_token, "toToken": to_token,
-                                               "amount": amount, **kw})
+                                               "amount": _to_base_units(amount, decimals), **kw})
 
     # ---------- non-custodial yield account ----------
     def account(self, address: Optional[str] = None) -> dict:
@@ -146,8 +161,23 @@ class AnyGas:
         """
         return self._get("/api/errors")
 
-    def account_quote(self, src_chain: int, amount_usd: float) -> dict:
-        return self._post("/api/ncaccount/quote", {"srcChain": src_chain, "amountUsd": amount_usd})
+    def account_quote(self, src_chain: int, amount_usd: float, to_chain: Optional[int] = None,
+                      to_address: Optional[str] = None, address: Optional[str] = None) -> dict:
+        """Read-only JIT quote for a spend from the yield account.
+
+        Same request as the JS SDK / MCP server: ``agent``, ``srcChain``, ``amount`` (USDC base
+        units), ``toChain`` (defaults to ``src_chain``) and ``toAddress`` (defaults to the agent).
+        """
+        agent = address or (self._acct.address if self._acct else None)
+        if not agent:
+            raise AnyGasError("pass address= or construct AnyGas(private_key=...)")
+        return self._post("/api/ncaccount/quote", {
+            "agent": agent,
+            "srcChain": int(src_chain),
+            "amount": _to_base_units(amount_usd, 6),
+            "toChain": int(to_chain if to_chain is not None else src_chain),
+            "toAddress": to_address or agent,
+        })
 
     def sign_spend(self, src_chain: int, amount_usd: float, to_chain: int, to_address: str,
                    deadline_s: int = 3600) -> dict:
@@ -159,7 +189,7 @@ class AnyGas:
         intent = {
             "agent": self._acct.address,
             "srcChain": src_chain,
-            "amount": str(int(round(amount_usd * 1e6))),
+            "amount": _to_base_units(amount_usd, 6),
             "toChain": to_chain,
             "toAddress": to_address,
             "nonce": str(int(time.time() * 1000)),

@@ -1,3 +1,4 @@
+// @ts-self-types="./agentkit.d.ts"
 // robyn-adapters/agentkit.mjs — Coinbase AgentKit action provider.
 //
 //   import { robynActionProvider } from 'robyn-adapters/agentkit';

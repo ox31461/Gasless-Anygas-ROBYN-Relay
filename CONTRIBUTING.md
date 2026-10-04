@@ -20,6 +20,24 @@ These packages are **clients** for the hosted Robyn service. The relayer, smart 
 - Never commit secrets. No keys, `.env` files, or tokens. The signer only ever signs; nothing in this repo should contain private key material.
 - Note which package(s) you touched and how you tested.
 
+## Running the tests
+
+The suites are fully offline (HTTP is mocked; signatures use throwaway random wallets). CI runs them on
+every push and pull request.
+
+```bash
+# JS packages (Node >= 18): agent-kit, mcp, adapters
+cd packages/agent-kit && npm install && npm test
+
+# Python SDK
+cd sdk-python && pip install -e ".[test]" && pytest
+```
+
 ## Reporting issues
 
 Open an issue with a minimal repro: the package + version, the call you made, what you expected, and what happened. For anything security-sensitive, please disclose privately rather than in a public issue.
+
+## Releases
+
+Maintainers: see [RELEASING.md](./RELEASING.md). Releases are tag-triggered (`agent-kit-v*`, `mcp-v*`,
+`adapters-v*`, `python-v*`).

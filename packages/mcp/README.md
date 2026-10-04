@@ -13,9 +13,15 @@ Give any MCP-capable agent (Claude Desktop, Cursor, agent frameworks) the abilit
 | `robyn_mesh` | no | List the gasless chains + cross-chain route graph (22 EVM nodes + Stellar). |
 | `robyn_quote` | no | Best gasless route for a move — estimated output, bridge, duration, fee. Read-only. |
 | `robyn_route_status` | no | Track an in-flight route (`BRIDGING → DONE`) with the destination tx. |
+| `robyn_agent_do` | no | One intent in, a quoted plan plus the exact EIP-712 payload to sign. `sandbox: true` rehearses. |
+| `robyn_errors` | no | The error contract: every `errorCode`, whether it is retryable, and the suggested action. |
+| `robyn_yield_account` | no | Your non-custodial Aave v3 / Moonwell position + relayer allowance (pass `agent` without a key). |
+| `robyn_yield_quote` | no | Read-only quote for a spend from your yield (pass `agent` without a key). |
 | `robyn_cross_chain` | **yes** | Execute a gasless cross-chain move. Signs one Permit2 intent; the agent pays no gas. |
+| `robyn_agent_execute` | **yes** | Plan, sign locally and submit in one call (idempotency-keyed). |
+| `robyn_yield_spend` | **yes** | Spend from your yield with one EIP-712 signature, delivered gaslessly. |
 
-Read tools work with **no credentials**. `robyn_cross_chain` only activates when `ROBYN_SIGNER_KEY` is set — otherwise the server is safely read-only.
+Read tools work with **no credentials**. The **yes** tools are only registered when `ROBYN_SIGNER_KEY` is set — otherwise the server is safely read-only and they are not listed at all.
 
 ## Configure (Claude Desktop)
 

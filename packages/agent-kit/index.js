@@ -1,3 +1,4 @@
+// @ts-self-types="./index.d.ts"
 // Robyn Agent Kit - the one-import way for an AI agent (or any automated system) to operate
 // on Robyn Chain, and every EVM chain Robyn deploys to, with ZERO gas management: no native
 // token, no per-chain balances, no refills. The agent holds a verified asset (WETH/USDG/...)
@@ -38,24 +39,32 @@ const PERMIT2_TRANSFER_TYPES = {
     { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' } ],
   TokenPermissions: [ { name: 'token', type: 'address' }, { name: 'amount', type: 'uint256' } ] };
 const strBig = (o) => JSON.parse(JSON.stringify(o, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)));
-const POST = async (url, b) => { const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(strBig(b)) }); return r.json(); };
+// Parse a service response. JSON error bodies (errorCode/error) are returned as-is so callers can
+// branch on errorCode; a non-JSON body (proxy error page, outage) becomes a clear Error.
+const readJson = async (r) => {
+  const t = await r.text();
+  try { return JSON.parse(t); } catch { throw new Error(`Robyn service returned non-JSON (HTTP ${r.status}): ${t.slice(0, 200)}`); }
+};
+const GET = async (url) => readJson(await fetch(url));
+const POST = async (url, b) => readJson(await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(strBig(b)) }));
 
 export class RobynAgent {
   constructor({ signer, svc = 'https://api.anygas.xyz/svc', permitVersion = '1' }) { this.signer = signer; this.svc = svc.replace(/\/$/, ''); this.permitVersion = permitVersion; this._info = null; this._route = null; }
 
   async chains() { return (await this.info()).gaslessChains || {}; }
-  async info() { if (!this._info) this._info = await (await fetch(`${this.svc}/api/gasless/info`)).json(); return this._info; }
-  async _user() { return this.signer.getAddress(); }
+  async info() { if (!this._info) this._info = await GET(`${this.svc}/api/gasless/info`); return this._info; }
+  async _user() { if (!this.signer) throw new Error('this call needs a signer (construct RobynAgent with { signer })'); return this.signer.getAddress(); }
   _nonce() { return BigInt(Date.now()) * 1000n + BigInt(Math.floor(Math.random() * 1000)); }
   _deadline(secs = 3600) { return BigInt(Math.floor(Date.now() / 1000) + secs); }
 
-  // EIP-2612 permit authorizing the router to pull `amount` (truly gasless first tx)
-  async _permitAuth(token, router, amount, deadline) {
+  // EIP-2612 permit authorizing the router to pull `amount` (truly gasless first tx).
+  // chainId must be the chain the token lives on (defaults to the service's home chain).
+  async _permitAuth(token, router, amount, deadline, chainId) {
     const provider = this.signer.provider; const user = await this._user();
     const erc = new ethers.Contract(token, ['function name() view returns (string)', 'function nonces(address) view returns (uint256)'], provider);
     const [name, pNonce] = await Promise.all([erc.name(), erc.nonces(user)]);
     const sig = ethers.Signature.from(await this.signer.signTypedData(
-      { name, version: this.permitVersion, chainId: (await this.info()).chainId, verifyingContract: token }, PERMIT_TYPES,
+      { name, version: this.permitVersion, chainId: chainId ?? (await this.info()).chainId, verifyingContract: token }, PERMIT_TYPES,
       { owner: user, spender: router, value: amount, nonce: pNonce, deadline }));
     return { mode: 1, nonce: 0n, deadline, sig: '0x', permitValue: amount, v: sig.v, r: sig.r, s: sig.s };
   }
@@ -96,7 +105,7 @@ export class RobynAgent {
     const maxFee = BigInt(q.suggestedMaxFee); const nonce = this._nonce(); const deadline = this._deadline();
     const intent = { user, token, to, amount, maxFee, verifiedAsset, nonce, deadline };
     const userSig = await this.signer.signTypedData(this._domain(router, 'RobynAnyGasRouter', chainId), PAYANY_TYPES, intent);
-    const auth = await this._permitAuth(token, router, amount, deadline);
+    const auth = await this._permitAuth(token, router, amount, deadline, chainId);
     return POST(`${this.svc}/api/gasless/submit`, { kind: 'payAny', intent, userSig, auth, route, chainId });
   }
 
@@ -108,7 +117,7 @@ export class RobynAgent {
   get permit2() { return PERMIT2_ADDRESS; }
 
   // The route graph + the relayer/Permit2 spender the SDK signs for.
-  async routeInfo() { if (!this._route) this._route = await (await fetch(`${this.svc}/api/route/chains`)).json(); return this._route; }
+  async routeInfo() { if (!this._route) this._route = await GET(`${this.svc}/api/route/chains`); return this._route; }
 
   // Quote the best cross-chain route (read-only). amount is in fromToken base units.
   //   const q = await agent.route({ fromChain: 8453, fromToken: USDC_BASE, toChain: 42161, toToken: USDC_ARB, amount: 25_000000n });
@@ -117,7 +126,7 @@ export class RobynAgent {
   }
 
   // Track an in-flight route to DONE.
-  async routeStatus(id) { return (await fetch(`${this.svc}/api/route/status?id=${encodeURIComponent(id)}`)).json(); }
+  async routeStatus(id) { return GET(`${this.svc}/api/route/status?id=${encodeURIComponent(id)}`); }
 
   /**
    * One call: intent in, a quoted plan plus the exact payload to sign out.
@@ -140,7 +149,7 @@ export class RobynAgent {
   }
 
   /** The full error contract: every errorCode, whether it is retryable, and the suggested action. */
-  async errors() { return (await fetch(`${this.svc}/api/errors`)).json(); }
+  async errors() { return GET(`${this.svc}/api/errors`); }
 
   // Permit2 SignatureTransfer - one off-chain signature authorizing the relayer to pull `amount`.
   async _permit2Sig({ token, amount, spender, nonce, deadline, chainId }) {
@@ -179,9 +188,11 @@ export class RobynAgent {
   //   await agent.approveYield({ chainId: 8453, budget: 100_000000n });
   //   await agent.yieldSpend({ srcChain: 8453, amount: 5_000000n, toChain: 42161, toAddress });
   // ===================================================================
-  async yieldAccount(agent) { agent = agent || await this._user(); return (await fetch(`${this.svc}/api/ncaccount/${agent}`)).json(); }
-  async yieldQuote({ srcChain, amount, toChain, toAddress }) {
-    return POST(`${this.svc}/api/ncaccount/quote`, { agent: await this._user(), srcChain: Number(srcChain), amount: String(BigInt(amount)), toChain: Number(toChain ?? srcChain), toAddress: toAddress || (await this._user()) });
+  async yieldAccount(agent) { agent = agent || await this._user(); return GET(`${this.svc}/api/ncaccount/${agent}`); }
+  // Read-only: pass `agent` to quote without a signer.
+  async yieldQuote({ srcChain, amount, toChain, toAddress, agent }) {
+    agent = agent || await this._user();
+    return POST(`${this.svc}/api/ncaccount/quote`, { agent, srcChain: Number(srcChain), amount: String(BigInt(amount)), toChain: Number(toChain ?? srcChain), toAddress: toAddress || agent });
   }
   async approveYield({ chainId, budget }) {
     const acct = await this.yieldAccount();
@@ -201,12 +212,15 @@ export class RobynAgent {
 
   // One call for everything: auto-picks your source (yield position vs idle balance) and delivers
   // `amount` USDC to `to` on `chain`, gaslessly. srcChain defaults to chain. Lowest-friction spend.
-  async spend({ to, amount, chain, srcChain }) {
+  // The idle-balance fallback is a Permit2 crossChain move, which signs over the token ADDRESS, so
+  // pass `fromToken` (USDC's address on srcChain) for it; toToken defaults to "USDC".
+  async spend({ to, amount, chain, srcChain, fromToken, toToken = 'USDC' }) {
     const src = Number(srcChain || chain);
     const need = BigInt(amount);
     const acct = await this.yieldAccount().catch(() => null);
     const pos = acct && (acct.positions || []).find((p) => Number(p.chainId) === src && BigInt(Math.round((p.earningUsd || 0) * 1e6)) >= need);
     if (pos) return this.yieldSpend({ srcChain: src, amount, toChain: chain, toAddress: to });
-    return this.crossChain({ fromChain: src, fromToken: "USDC", amount: String(need), toChain: chain, toToken: "USDC", toAddress: to });
+    if (!fromToken || !ethers.isAddress(fromToken)) throw new Error('Robyn spend: no yield position covers ' + need + ' on chain ' + src + '; to spend idle balance pass fromToken (the USDC address on chain ' + src + ') - Permit2 signs over the token address');
+    return this.crossChain({ fromChain: src, fromToken, amount: String(need), toChain: chain, toToken, toAddress: to });
   }
 }

@@ -1,3 +1,4 @@
+// @ts-self-types="./ai-sdk.d.ts"
 // robyn-adapters/ai-sdk.mjs — Vercel AI SDK tools.
 //
 //   import { robynTools } from 'robyn-adapters/ai-sdk';
