@@ -15,6 +15,7 @@ dependencies = ["requests>=2.28"]
 [project.optional-dependencies]
 signing = ["eth-account>=0.10"]
 langchain = ["langchain-core>=0.1"]
+test = ["pytest>=7", "eth-account>=0.10"]
 
 [project.urls]
 Homepage = "https://anygas.xyz"
@@ -23,3 +24,6 @@ Repository = "https://github.com/ox31461/Gasless-Anygas-ROBYN-Relay"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
