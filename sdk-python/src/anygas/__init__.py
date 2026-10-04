@@ -65,7 +65,8 @@ class AnyGas:
         except ValueError as e:
             raise AnyGasError(f"non-JSON response ({r.status_code})") from e
         if r.status_code >= 400:
-            raise AnyGasError(str(j.get("error") or j))
+            msg = j.get("error") if isinstance(j, dict) else None
+            raise AnyGasError(str(msg or j))
         return j
 
     # ---------- discovery / status ----------
@@ -146,8 +147,23 @@ class AnyGas:
         """
         return self._get("/api/errors")
 
-    def account_quote(self, src_chain: int, amount_usd: float) -> dict:
-        return self._post("/api/ncaccount/quote", {"srcChain": src_chain, "amountUsd": amount_usd})
+    def account_quote(self, src_chain: int, amount_usd: float, to_chain: Optional[int] = None,
+                      to_address: Optional[str] = None, address: Optional[str] = None) -> dict:
+        """Read-only JIT quote for a spend from the yield account.
+
+        Same request as the JS SDK / MCP server: ``agent``, ``srcChain``, ``amount`` (USDC base
+        units), ``toChain`` (defaults to ``src_chain``) and ``toAddress`` (defaults to the agent).
+        """
+        agent = address or (self._acct.address if self._acct else None)
+        if not agent:
+            raise AnyGasError("pass address= or construct AnyGas(private_key=...)")
+        return self._post("/api/ncaccount/quote", {
+            "agent": agent,
+            "srcChain": int(src_chain),
+            "amount": str(int(round(amount_usd * 1e6))),
+            "toChain": int(to_chain if to_chain is not None else src_chain),
+            "toAddress": to_address or agent,
+        })
 
     def sign_spend(self, src_chain: int, amount_usd: float, to_chain: int, to_address: str,
                    deadline_s: int = 3600) -> dict:
