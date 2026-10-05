@@ -61,6 +61,17 @@ def test_defaults_and_base_normalisation():
     assert AnyGas(BASE + "/").base == BASE
 
 
+def test_default_base_matches_js_clients():
+    # Same gateway as anygas-agent-kit, anygas-mcp and anygas-adapters: one URL across every SDK.
+    assert anygas.DEFAULT_BASE == "https://api.anygas.xyz/svc"
+    assert AnyGas().base == "https://api.anygas.xyz/svc"
+
+
+def test_default_base_is_used_for_requests(http):
+    AnyGas().status()
+    assert http.calls[0].url == "https://api.anygas.xyz/svc/api/status"
+
+
 def test_api_key_header_sent(http):
     AnyGas(BASE, api_key="k-123").status()
     req = http.calls[0]

@@ -1,6 +1,6 @@
 """AnyGas Python SDK — gasless cross-chain routing + yield-native gasless spending for AI agents.
 
-Python twin of the anygas-agent-kit npm package. API surface mirrors https://anygas.xyz/openapi.json.
+Python twin of the anygas-agent-kit npm package. API surface mirrors https://api.anygas.xyz/openapi.json.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any, Optional
 import requests
 
 __version__ = "0.2.0"
-DEFAULT_BASE = "https://anygas.xyz/svc"
+DEFAULT_BASE = "https://api.anygas.xyz/svc"
 
 _SPEND_TYPES = {
     "Spend": [

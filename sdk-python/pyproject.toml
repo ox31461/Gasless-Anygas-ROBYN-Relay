@@ -20,7 +20,7 @@ test = ["pytest>=7", "eth-account>=0.10"]
 
 [project.urls]
 Homepage = "https://anygas.xyz"
-Documentation = "https://anygas.xyz/llms.txt"
+Documentation = "https://api.anygas.xyz/llms.txt"
 Repository = "https://github.com/ox31461/Gasless-Anygas-ROBYN-Relay"
 
 [tool.setuptools.packages.find]
