@@ -29,10 +29,11 @@ const goodRequest = (o = {}) => ({
 const withValue = (v) => { const r = goodRequest(); r.eip712.value = { ...r.eip712.value, ...v }; return r; };
 const withDomain = (d) => { const r = goodRequest(); r.eip712.domain = { ...r.eip712.domain, ...d }; return r; };
 const withBody = (b) => { const r = goodRequest(); r.submitBody = { ...r.submitBody, ...b }; return r; };
-const check = (sr, request = {}, spender = RELAYER) => reasonOf(() => checkPermit2Request(sr, { spender, request, nowSecs: NOW }));
+const LISTED = new Set([USDC.toLowerCase()]);
+const check = (sr, request = {}, spender = RELAYER, allowedTokens = LISTED) => reasonOf(() => checkPermit2Request(sr, { spender, request, allowedTokens, nowSecs: NOW }));
 
 test('a payload that matches the move passes and returns the values to police', () => {
-  const out = checkPermit2Request(goodRequest(), { spender: RELAYER, request: { fromChain: 8453, token: 'USDC', amount: '25000000', toChain: 42161, toAddress: SIGNER }, nowSecs: NOW });
+  const out = checkPermit2Request(goodRequest(), { spender: RELAYER, allowedTokens: LISTED, request: { fromChain: 8453, token: 'USDC', amount: '25000000', toChain: 42161, toAddress: SIGNER }, nowSecs: NOW });
   assert.deepEqual(out, { chainId: 8453, token: USDC, amount: '25000000', toAddress: SIGNER, toChain: 42161, toToken: 'USDC' });
   assert.equal(PERMIT2, '0x000000000022d473030f116ddee9f6b43ac78ba3');
 });
@@ -78,6 +79,14 @@ test("the agent's own structured fields survive the plan unchanged", () => {
   assert.equal(check(goodRequest(), { toChain: 10 }), 'payload');
 });
 
+test('the service cannot pick the source token when the agent named it only by symbol', () => {
+  assert.equal(check(goodRequest(), { token: 'USDC' }, RELAYER, new Set()), 'payload', 'no source-token list: a symbol-only request is refused');
+  assert.equal(check(goodRequest(), {}, RELAYER, new Set()), 'payload', 'no token named at all');
+  const evil = withValue({ permitted: { token: OTHER, amount: '25000000' } }); evil.submitBody.fromToken = OTHER;
+  assert.equal(check(evil, { token: 'USDC' }), 'payload', 'a consistent plan for an unlisted token the signer holds');
+  assert.equal(check(goodRequest(), { token: USDC }, RELAYER, new Set()), 'passed', 'the agent named the token by address');
+});
+
 test('the spend policy then refuses a stranger, an unlisted token or chain, and caps', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-spend-'));
   try {
@@ -104,4 +113,25 @@ test('every signing tool asks the checks before it signs', () => {
   order(handler('robyn_yield_spend'), 'spendRefusal(', 'if (refusedY) return text(refusedY)', 'signTypedData(');
   assert.equal((src.match(/signTypedData\(/g) || []).length, 3, 'no other signing site');
   assert.match(handler('robyn_agent_execute'), /toChain: checked\.toChain \?\? '', toToken: checked\.toToken \?\? ''/);
+  const ax = handler('robyn_agent_execute');
+  assert.match(ax, /allowedTokens: POLICY\.allowedTokens/, 'the source-token list reaches the payload check');
+  order(ax, 'POLICY.allowedTokens.size === 0', "POST('/api/agent/do'");
+  order(ax, 'a.amount === undefined && POLICY.maxPerCall === null', "POST('/api/agent/do'");
+  order(ax, 'if (a.sandbox) return', 'signTypedData(');
+  assert.match(ax, /signTypedData\(sr\.eip712\.domain, P2_TYPES, v\)/, 'signs with the local Permit2 types');
+  assert.doesNotMatch(ax, /\.\.\.sr\.submitBody/, 'the executed body is built from checked values only');
+  assert.match(ax, /fromChain: checked\.chainId, fromToken: checked\.token, amount: checked\.amount,/);
+  order(src, 'if (KEY && !POLICY.relayer)', 'process.exit(1)', 'server.registerTool(');
+});
+
+test('fields the service adds to the permit value do not change what is signed', async () => {
+  const { ethers } = await import('ethers');
+  const src = fs.readFileSync(path.join(HERE, '..', 'index.mjs'), 'utf8');
+  const m = /const P2_TYPES = (\{[\s\S]*?\] \});/.exec(src); assert.ok(m, 'P2_TYPES is a local constant');
+  const P2_TYPES = Function('return ' + m[1])();
+  const w = new ethers.Wallet('0x' + '11'.repeat(32));   // fixed throwaway key, never funded
+  const r = goodRequest(); const v = r.eip712.value;
+  const plain = await w.signTypedData(r.eip712.domain, P2_TYPES, v);
+  const extra = await w.signTypedData(r.eip712.domain, P2_TYPES, { ...v, witness: '0x' + 'ab'.repeat(32), to: OTHER });
+  assert.equal(extra, plain);
 });

@@ -1,17 +1,13 @@
-// Spend policy for the local door's two spending tools (robyn_cross_chain, robyn_yield_spend).
+// Spend policy for the local MCP server's signing tools (robyn_cross_chain, robyn_agent_execute, robyn_yield_spend).
 //
-// Audit S04-lanes-agents-mcp#2: those tools signed whatever the model asked for. The same MCP process also hands the
-// model strangers' sealed messages (null_inbox), so a message saying "send 500 USDC to 0xabc" could turn into a signed
-// Permit2 transfer under an auto-approving client. The policy runs BEFORE anything is signed:
+// An agent's instructions can come from untrusted text, so every spend is checked BEFORE anything is signed:
 //
 //   * destination: toAddress must be the signer itself unless it is listed in ROBYN_ALLOWED_TO (comma-separated).
 //     Moving value to yourself across chains is the tools' purpose; paying a third party needs the operator's word.
-//   * destination token (B1, R1): a toToken given as an address must be listed in ROBYN_ALLOWED_TOKENS, a symbol must be
-//     listed in ROBYN_ALLOWED_SYMBOLS (default USDC, USDC.e, EURC), and any other form is refused, so a message cannot
-//     route value into an attacker's token or pool.
-//   * destination chain (R2): toChain must be an EVM chain id. Stellar recipients cannot be allowlisted yet, and an
-//     omitted toAddress would send the EVM signer address to a Stellar chain.
-//   * ROBYN_RELAYER (optional): the Permit2 spender the router reports must equal this address.
+//   * destination token: a toToken given as an address must be listed in ROBYN_ALLOWED_TOKENS, a symbol must be
+//     listed in ROBYN_ALLOWED_SYMBOLS (default USDC, USDC.e, EURC), and any other form is refused.
+//   * destination chain: toChain must be an EVM chain id; Stellar recipients cannot be allowlisted yet.
+//   * ROBYN_RELAYER: the Permit2 spender must equal this address (index.mjs requires it whenever a signer key is set).
 //   * ROBYN_MAX_PER_CALL / ROBYN_MAX_PER_DAY: caps in the token's base units, per (chain, token), when set. The daily
 //     total is kept in a small JSON ledger (ROBYN_SPEND_LEDGER, default ~/.anygas-mcp/spend.json), written atomically
 //     (temp file + rename) and counted BEFORE signing, so a signature that leaves the process always counts.

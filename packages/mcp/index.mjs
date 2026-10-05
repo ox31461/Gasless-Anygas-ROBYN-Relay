@@ -38,6 +38,10 @@ const GET = async (p) => (await fetch(SVC + p)).json();
 const POST = async (p, b) => (await fetch(SVC + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(strBig(b)) })).json();
 const POLICY = policyFromEnv();   // a malformed cap or list stops the server at start
 const SPEND = makeSpendGuard(POLICY);
+if (KEY && !POLICY.relayer) {
+  console.error('robyn-mcp: ROBYN_SIGNER_KEY is set but ROBYN_RELAYER is not. Pin the relayer address the signer\'s permits may name as spender, or unset the key to run read-only.');
+  process.exit(1);
+}
 const refusal = (e) => { if (e instanceof SpendPolicyError) return { ok: false, errorCode: e.errorCode, reason: e.reason, error: e.message }; throw e; };
 const spendRefusal = (req) => { try { SPEND.authorize(req); return null; } catch (e) { return refusal(e); } };
 const text = (o) => ({ content: [{ type: 'text', text: typeof o === 'string' ? o : JSON.stringify(o, null, 2) }] });
@@ -142,25 +146,30 @@ server.registerTool('robyn_agent_execute',
   async (a) => {
     if (!KEY) return text('ROBYN_SIGNER_KEY is not set — this server is read-only. Use robyn_agent_do to plan, or set the key to execute.');
     const w = new ethers.Wallet(KEY);
+    // The plan is the service's choice, so what it may fill in must already be bounded here.
+    if (!ethers.isAddress(String(a.token ?? '').trim()) && POLICY.allowedTokens.size === 0) return text({ ok: false, errorCode: 'SPEND_POLICY', reason: 'input', error: 'pass token as an address, or list the source tokens this agent may move in ROBYN_ALLOWED_TOKENS; nothing was signed' });
+    if (a.amount === undefined && POLICY.maxPerCall === null) return text({ ok: false, errorCode: 'SPEND_POLICY', reason: 'input', error: 'pass amount in base units, or set ROBYN_MAX_PER_CALL so a planned amount is capped; nothing was signed' });
     const plan = await POST('/api/agent/do', { ...a, toAddress: a.toAddress || w.address });
     if (plan && plan.errorCode) return text(plan);                 // typed refusal: hand it back as-is
     if (plan && plan.status === 'done') return text(plan);          // sandbox completed, nothing to sign
     const sr = plan && plan.signRequest;
     if (!sr || !sr.eip712) return text({ note: 'nothing to sign — plan did not reach a signable state', plan });
+    if (a.sandbox) return text({ note: 'sandbox: the plan asked for a signature; nothing was signed', plan });
     // Sign the payload the SERVER returned (re-deriving it locally makes permits unredeemable), but only after it is
     // checked against this move: canonical Permit2 domain on the source chain, the expected relayer as spender, a short
     // deadline, a submit body naming the same chain/token/amount, the agent's own fields unchanged, then the spend policy.
     let checked;
     try {
       const expectSpender = POLICY.relayer || (await GET('/api/route/chains')).relayer;
-      checked = checkPermit2Request(sr, { spender: expectSpender, request: { fromChain: a.fromChain, token: a.token, amount: a.amount, toChain: a.toChain, toAddress: a.toAddress || w.address } });
+      checked = checkPermit2Request(sr, { spender: expectSpender, allowedTokens: POLICY.allowedTokens, request: { fromChain: a.fromChain, token: a.token, amount: a.amount, toChain: a.toChain, toAddress: a.toAddress || w.address } });
     } catch (e) { return text(refusal(e)); }
     const refusedA = spendRefusal({ signer: w.address, chain: checked.chainId, token: checked.token, amount: checked.amount, toAddress: checked.toAddress, toChain: checked.toChain ?? '', toToken: checked.toToken ?? '', spender: sr.eip712.value.spender });
     if (refusedA) return text(refusedA);
     const v = sr.eip712.value;
     const signature = await w.signTypedData(sr.eip712.domain, P2_TYPES, v);
     const body = {
-      ...sr.submitBody,
+      fromChain: checked.chainId, fromToken: checked.token, amount: checked.amount,
+      toChain: checked.toChain, toToken: checked.toToken, toAddress: checked.toAddress, mode: 'permit2',
       permit2: { owner: w.address, permitted: v.permitted, nonce: v.nonce, deadline: v.deadline, signature },
     };
     const res = await fetch(SVC + '/api/route/execute', {

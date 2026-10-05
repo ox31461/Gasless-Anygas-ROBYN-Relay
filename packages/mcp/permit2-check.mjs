@@ -21,8 +21,9 @@ const chainNum = (v, why) => { let n; try { n = BigInt(String(v).trim()); } catc
 ///   sr       the service's signRequest: { eip712: { domain, value }, submitBody }
 ///   spender  the relayer this server expects (ROBYN_RELAYER, else the one /api/route/chains advertises)
 ///   request  the agent's structured fields, when given: { fromChain, token, amount, toChain, toAddress }
+///   allowedTokens  lowercase source-token addresses the signer may move when the agent did not name one by address
 /// Throws SpendPolicyError (reason 'payload') on any mismatch.
-export function checkPermit2Request(sr, { spender, request = {}, nowSecs = Math.floor(Date.now() / 1000) } = {}) {
+export function checkPermit2Request(sr, { spender, request = {}, allowedTokens = new Set(), nowSecs = Math.floor(Date.now() / 1000) } = {}) {
   if (!sr || typeof sr !== 'object' || !sr.eip712 || typeof sr.eip712 !== 'object') bad('no EIP-712 payload');
   const { domain, value } = sr.eip712;
   const body = sr.submitBody;
@@ -50,7 +51,9 @@ export function checkPermit2Request(sr, { spender, request = {}, nowSecs = Math.
   if (body.toAddress === undefined || body.toAddress === null || String(body.toAddress) === '') bad('submit body names no destination');
   // the agent's own structured fields, when it gave them, must survive the plan unchanged
   if (request.fromChain !== undefined && chainNum(request.fromChain, 'requested chain') !== chainId) bad('chain differs from the request');
-  if (request.token !== undefined && ADDR.test(String(request.token).trim()) && lc(String(request.token).trim()) !== lc(token)) bad('token differs from the request');
+  const askedToken = request.token === undefined ? '' : String(request.token).trim();
+  if (ADDR.test(askedToken)) { if (lc(askedToken) !== lc(token)) bad('token differs from the request'); }
+  else if (!allowedTokens.has(lc(token))) bad('the source token is not one the agent named by address or listed in ROBYN_ALLOWED_TOKENS');
   if (request.amount !== undefined && uint(String(request.amount).trim(), 'requested amount') !== amount) bad('amount differs from the request');
   if (request.toAddress !== undefined && lc(request.toAddress) !== lc(body.toAddress)) bad('destination differs from the request');
   if (request.toChain !== undefined && chainNum(request.toChain, 'requested destination chain') !== chainNum(body.toChain, 'submit destination chain')) bad('destination chain differs from the request');
