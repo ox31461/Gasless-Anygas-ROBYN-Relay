@@ -36,21 +36,33 @@ Read tools work with **no credentials**. `robyn_cross_chain` only activates when
 
 ## One-time setup (only for execution)
 
-Permit2 SignatureTransfer requires a single, standard approval per (token, chain) — done once by the signer:
+Permit2 SignatureTransfer requires a single, standard approval per (token, chain) — done once by the signer. Approve only what this agent may move: the allowance is the most a misled or leaked signer can lose.
 
 ```js
-await token.approve("0x000000000022D473030F116dDEE9F6B43aC78BA3", ethers.MaxUint256);
+await token.approve("0x000000000022D473030F116dDEE9F6B43aC78BA3", BUDGET);
 ```
+
+## Spend policy
+
+Every signing tool checks the spend before it signs; a refusal returns `{ ok: false, errorCode: "SPEND_POLICY", reason }` and signs nothing.
+
+- `toAddress` must be the signer itself unless it is listed in `ROBYN_ALLOWED_TO` (comma-separated addresses).
+- `toToken` given as an address must be listed in `ROBYN_ALLOWED_TOKENS`; a symbol must be listed in `ROBYN_ALLOWED_SYMBOLS` (default `USDC,USDC.e,EURC`).
+- `fromChain` and `toChain` must be EVM chain ids; Stellar destinations are refused by this local server for now.
+- `ROBYN_MAX_PER_CALL` / `ROBYN_MAX_PER_DAY` cap each spend and each UTC day, in base units, per (chain, token). The daily total lives in `ROBYN_SPEND_LEDGER` (default `~/.anygas-mcp/spend.json`); run one server per ledger, and keep the agent from writing to it.
+- `ROBYN_RELAYER` pins the Permit2 spender. Set it: without a pin, the relayer is whatever the service advertises.
+- `robyn_agent_execute` signs the payload the service plans, only after checking it is a Permit2 transfer on the source chain to the expected relayer, with a short deadline, for the token, amount and destination the submit body names and the agent asked for.
+- A malformed cap or list entry stops the server at start.
 
 After that, every cross-chain move is a single gasless signature — the agent never holds native gas anywhere.
 
 ## Example
 
 > **Agent:** *"Move 25 USDC from Base to Arbitrum."*
-> Calls `robyn_cross_chain({ fromChain: 8453, fromToken: "0x833589…", amount: "25000000", toChain: 42161, toToken: "0xaf88…" })`
+> Calls `robyn_cross_chain({ fromChain: 8453, fromToken: "0x833589…", amount: "25000000", toChain: 42161, toToken: "USDC" })`
 > → `{ id: "rt_…", status: "BRIDGING", gasless: true }`, then `robyn_route_status` → `DONE`.
 
-Stellar is a first-class destination too — set `toChain: "stellar"` and `toToken: "USDC"`.
+The hosted Robyn router also routes to Stellar; this local signing server refuses Stellar destinations for now (see the spend policy above).
 
 ## Security notes
 
