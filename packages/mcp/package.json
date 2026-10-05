@@ -9,6 +9,8 @@
   "main": "index.mjs",
   "files": [
     "index.mjs",
+    "spend-policy.mjs",
+    "permit2-check.mjs",
     "README.md",
     "LICENSE",
     "NOTICE"
@@ -34,7 +36,7 @@
     "zod": "^3.23.0"
   },
   "author": "Robyn",
-  "homepage": "https://claude.ai/code/artifact/cb28d113-063e-4ddb-8e71-165490eb4fff",
+  "homepage": "https://github.com/ox31461/Gasless-Anygas-ROBYN-Relay",
   "publishConfig": {
     "access": "public"
   }

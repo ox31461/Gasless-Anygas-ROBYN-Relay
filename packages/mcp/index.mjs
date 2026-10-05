@@ -13,12 +13,16 @@
 //     ROBYN_SIGNER_KEY: "0x…"                                  // OPTIONAL — omit for read-only
 //   }
 // One-time per (token, chain) before executing: the signer must approve Permit2 to spend the
-// token — a standard, single ERC-20 approval:  token.approve(0x000000000022D473030F116dDEE9F6B43aC78BA3, MaxUint256)
+// token — a single ERC-20 approval sized to the agent's budget (the allowance is the most a misled signer can lose):
+//   token.approve(0x000000000022D473030F116dDEE9F6B43aC78BA3, <budget>)
+// Every signing tool runs the spend policy (spend-policy.mjs) first; see the README for ROBYN_ALLOWED_* and the caps.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { createRequire } from 'node:module';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { ethers } from 'ethers';
+import { SpendPolicyError, policyFromEnv, makeSpendGuard } from './spend-policy.mjs';
+import { checkPermit2Request } from './permit2-check.mjs';
 
 const SVC = (process.env.ROBYN_SVC || 'https://api.anygas.xyz/svc').replace(/\/$/, '');
 const KEY = process.env.ROBYN_SIGNER_KEY || '';
@@ -32,6 +36,14 @@ const P2_TYPES = {
 const strBig = (o) => JSON.parse(JSON.stringify(o, (_, v) => (typeof v === 'bigint' ? v.toString() : v)));
 const GET = async (p) => (await fetch(SVC + p)).json();
 const POST = async (p, b) => (await fetch(SVC + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(strBig(b)) })).json();
+const POLICY = policyFromEnv();   // a malformed cap or list stops the server at start
+const SPEND = makeSpendGuard(POLICY);
+if (KEY && !POLICY.relayer) {
+  console.error('robyn-mcp: ROBYN_SIGNER_KEY is set but ROBYN_RELAYER is not. Pin the relayer address the signer\'s permits may name as spender, or unset the key to run read-only.');
+  process.exit(1);
+}
+const refusal = (e) => { if (e instanceof SpendPolicyError) return { ok: false, errorCode: e.errorCode, reason: e.reason, error: e.message }; throw e; };
+const spendRefusal = (req) => { try { SPEND.authorize(req); return null; } catch (e) { return refusal(e); } };
 const text = (o) => ({ content: [{ type: 'text', text: typeof o === 'string' ? o : JSON.stringify(o, null, 2) }] });
 
 const { version: PKG_VERSION } = createRequire(import.meta.url)('./package.json');
@@ -77,16 +89,21 @@ server.registerTool('robyn_cross_chain',
     const ri = await GET('/api/route/chains');
     const spender = ri.relayer;
     if (!spender) return text('Robyn Router relayer/spender unavailable — is the service reachable?');
+    let chainId, token;
+    try { chainId = Number(BigInt(String(a.fromChain).trim())); token = ethers.getAddress(String(a.fromToken).trim()); if (!Number.isSafeInteger(chainId) || chainId <= 0) throw new Error('chain'); }
+    catch (e) { return text({ ok: false, errorCode: 'SPEND_POLICY', reason: 'input', error: 'fromChain must be an EVM chain id and fromToken a token address; nothing was signed' }); }
+    const refusedX = spendRefusal({ signer: w.address, chain: chainId, token, amount: a.amount, toAddress: a.toAddress || w.address, toChain: a.toChain, toToken: a.toToken, spender });
+    if (refusedX) return text(refusedX);
     const amount = BigInt(a.amount);
     const nonce = BigInt(Date.now()) * 1000n + BigInt(Math.floor(Math.random() * 1000));
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
     const signature = await w.signTypedData(
-      { name: 'Permit2', chainId: Number(a.fromChain), verifyingContract: PERMIT2 },
-      P2_TYPES, { permitted: { token: a.fromToken, amount }, spender, nonce, deadline });
+      { name: 'Permit2', chainId, verifyingContract: PERMIT2 },
+      P2_TYPES, { permitted: { token, amount }, spender, nonce, deadline });
     const res = await POST('/api/route/execute', {
-      fromChain: a.fromChain, fromToken: a.fromToken, amount: a.amount,
-      toChain: a.toChain, toToken: a.toToken, toAddress: a.toAddress || w.address, mode: 'permit2',
-      permit2: { owner: w.address, permitted: { token: a.fromToken, amount }, nonce, deadline, signature },
+      fromChain: chainId, fromToken: token, amount: String(amount),
+      toChain: Number(BigInt(String(a.toChain).trim())), toToken: a.toToken, toAddress: a.toAddress || w.address, mode: 'permit2',
+      permit2: { owner: w.address, permitted: { token, amount }, nonce, deadline, signature },
     });
     return text(res);
   });
@@ -129,17 +146,29 @@ server.registerTool('robyn_agent_execute',
   async (a) => {
     if (!KEY) return text('ROBYN_SIGNER_KEY is not set — this server is read-only. Use robyn_agent_do to plan, or set the key to execute.');
     const w = new ethers.Wallet(KEY);
+    // The plan is the service's choice, so what it may fill in must already be bounded here.
+    if (!ethers.isAddress(String(a.token ?? '').trim()) && POLICY.allowedTokens.size === 0) return text({ ok: false, errorCode: 'SPEND_POLICY', reason: 'input', error: 'pass token as an address, or list the source tokens this agent may move in ROBYN_ALLOWED_TOKENS; nothing was signed' });
+    if (a.amount === undefined && POLICY.maxPerCall === null) return text({ ok: false, errorCode: 'SPEND_POLICY', reason: 'input', error: 'pass amount in base units, or set ROBYN_MAX_PER_CALL so a planned amount is capped; nothing was signed' });
     const plan = await POST('/api/agent/do', { ...a, toAddress: a.toAddress || w.address });
     if (plan && plan.errorCode) return text(plan);                 // typed refusal: hand it back as-is
     if (plan && plan.status === 'done') return text(plan);          // sandbox completed, nothing to sign
     const sr = plan && plan.signRequest;
     if (!sr || !sr.eip712) return text({ note: 'nothing to sign — plan did not reach a signable state', plan });
-    // Sign the payload the SERVER returned. It already binds spender to the relayer that calls
-    // permitTransferFrom; re-deriving these fields locally is how permits become unredeemable.
+    if (a.sandbox) return text({ note: 'sandbox: the plan asked for a signature; nothing was signed', plan });
+    // Sign the payload the SERVER returned (re-deriving it locally makes permits unredeemable), but only after it is
+    // checked against this move: canonical Permit2 domain on the source chain, the expected relayer as spender, a short
+    // deadline, a submit body naming the same chain/token/amount, the agent's own fields unchanged, then the spend policy.
+    let checked;
+    try {
+      checked = checkPermit2Request(sr, { spender: POLICY.relayer, allowedTokens: POLICY.allowedTokens, request: { fromChain: a.fromChain, token: a.token, amount: a.amount, toChain: a.toChain, toAddress: a.toAddress || w.address } });
+    } catch (e) { return text(refusal(e)); }
+    const refusedA = spendRefusal({ signer: w.address, chain: checked.chainId, token: checked.token, amount: checked.amount, toAddress: checked.toAddress, toChain: checked.toChain ?? '', toToken: checked.toToken ?? '', spender: sr.eip712.value.spender });
+    if (refusedA) return text(refusedA);
     const v = sr.eip712.value;
     const signature = await w.signTypedData(sr.eip712.domain, P2_TYPES, v);
     const body = {
-      ...sr.submitBody,
+      fromChain: checked.chainId, fromToken: checked.token, amount: checked.amount,
+      toChain: checked.toChain, toToken: checked.toToken, toAddress: checked.toAddress, mode: 'permit2',
       permit2: { owner: w.address, permitted: v.permitted, nonce: v.nonce, deadline: v.deadline, signature },
     };
     const res = await fetch(SVC + '/api/route/execute', {
@@ -161,8 +190,12 @@ server.registerTool('robyn_yield_spend',
   { title: 'Spend from yield (one signature)', description: 'Spend from your yield (Aave v3 or Moonwell) with ONE EIP-712 signature: Robyn pulls only up to your on-chain aUSDC/mUSDC allowance, unwinds exactly what is needed, and delivers USDC to toAddress on toChain, gaslessly. Requires ROBYN_SIGNER_KEY + a one-time aUSDC/mUSDC allowance to the relayer. The remainder keeps earning interest.', inputSchema: { srcChain: z.union([z.number(), z.string()]), amount: z.string().describe('USDC base units'), toChain: z.union([z.number(), z.string()]).optional(), toAddress: z.string().optional() } },
   async (a) => {
     if (!KEY) return text('ROBYN_SIGNER_KEY is not set — this server is read-only.');
-    const w = new ethers.Wallet(KEY); const src = Number(a.srcChain);
-    const intent = { agent: w.address, srcChain: src, amount: String(BigInt(a.amount)), toChain: Number(a.toChain ?? src), toAddress: a.toAddress || w.address, nonce: String(Date.now()) + String(Math.floor(Math.random() * 1e6)), deadline: String(Math.floor(Date.now() / 1000) + 3600) };
+    const w = new ethers.Wallet(KEY); let src;
+    try { src = Number(BigInt(String(a.srcChain).trim())); if (!Number.isSafeInteger(src) || src <= 0) throw new Error('chain'); }
+    catch (e) { return text({ ok: false, errorCode: 'SPEND_POLICY', reason: 'input', error: 'srcChain must be an EVM chain id; nothing was signed' }); }
+    const refusedY = spendRefusal({ signer: w.address, chain: src, token: 'yield-usdc', amount: a.amount, toAddress: a.toAddress || w.address, toChain: a.toChain ?? src, spenderless: true });   // the Spend intent names no spender
+    if (refusedY) return text(refusedY);
+    const intent = { agent: w.address, srcChain: src, amount: String(BigInt(a.amount)), toChain: Number(BigInt(String(a.toChain ?? src).trim())), toAddress: a.toAddress || w.address, nonce: String(Date.now()) + String(Math.floor(Math.random() * 1e6)), deadline: String(Math.floor(Date.now() / 1000) + 3600) };
     const types = { Spend: [{ name: 'agent', type: 'address' }, { name: 'srcChain', type: 'uint256' }, { name: 'amount', type: 'uint256' }, { name: 'toChain', type: 'uint256' }, { name: 'toAddress', type: 'address' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' }] };
     const signature = await w.signTypedData({ name: 'RobynNCAccount', version: '1', chainId: src }, types, intent);
     return text(await POST('/api/ncaccount/spend', { intent, signature, live: true }));
