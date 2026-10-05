@@ -6,7 +6,7 @@ labels: bug
 ---
 
 **Package + version**
-<!-- e.g. @robyn/agent-kit 1.0.0 (SDK / MCP / adapters) -->
+<!-- e.g. @anygas/agent-kit 1.3.0 (SDK / MCP / adapters) -->
 
 **What you did**
 <!-- The call or config, with a minimal repro. Redact any keys or addresses you don't want public. -->

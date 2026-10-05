@@ -6,10 +6,12 @@
 
 ```bash
 npm i anygas-agent-kit ethers
+# or, from JSR:
+npx jsr add @anygas/agent-kit
 ```
 
 ```js
-import { RobynAgent } from 'anygas-agent-kit';
+import { RobynAgent } from 'anygas-agent-kit';   // '@anygas/agent-kit' when installed from JSR
 
 const agent = new RobynAgent({ signer, svc: 'https://api.anygas.xyz/svc' });
 

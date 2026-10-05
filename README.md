@@ -2,20 +2,20 @@
 
 **A gasless intent layer for AI agents.** Sign one intent, hold no native gas anywhere, and pay or move value across **22 EVM chains + Stellar mainnet**. Robyn's relayer fronts the gas — on the source chain, the destination chain, and the bridge — and is reimbursed from the token being moved. The agent's signer needs **zero native balance**. It only signs.
 
-[![agent-kit](https://jsr.io/badges/@robyn/agent-kit)](https://jsr.io/@robyn/agent-kit)
-[![mcp](https://jsr.io/badges/@robyn/mcp)](https://jsr.io/@robyn/mcp)
-[![adapters](https://jsr.io/badges/@robyn/adapters)](https://jsr.io/@robyn/adapters)
+[![agent-kit](https://jsr.io/badges/@anygas/agent-kit)](https://jsr.io/@anygas/agent-kit)
+[![mcp](https://jsr.io/badges/@anygas/mcp)](https://jsr.io/@anygas/mcp)
+[![adapters](https://jsr.io/badges/@anygas/adapters)](https://jsr.io/@anygas/adapters)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Live](https://img.shields.io/badge/live-api.anygas.xyz-ffb020?logo=lightning)](https://api.anygas.xyz)
 
 > **🔗 Live now — [anygas.xyz](https://api.anygas.xyz)** · [Ask the concierge](https://api.anygas.xyz/svc/api/concierge) · [Live mesh (JSON)](https://api.anygas.xyz/svc/api/route/chains) · [llms.txt](https://api.anygas.xyz/llms.txt)
 
 ```bash
-npx jsr add @robyn/agent-kit
+npx jsr add @anygas/agent-kit
 ```
 
 ```js
-import { RobynAgent } from '@robyn/agent-kit';
+import { RobynAgent } from '@anygas/agent-kit';
 
 const agent = new RobynAgent({ signer, svc: 'https://api.anygas.xyz/svc' });
 
@@ -61,33 +61,35 @@ Stellar mainnet contract: [`CDDJAVK2CLA2LIYJWXH4APVFEDQBH3HT72UFAVSLNBLDTEZELJ6P
 
 ## Integrate three ways
 
-Pick the surface that fits your stack. All three are MIT client packages published on [JSR](https://jsr.io).
+Pick the surface that fits your stack. All three are MIT client packages published on [JSR](https://jsr.io) under the `@anygas/*` scope (npm: `anygas-agent-kit`, `anygas-mcp`, `anygas-adapters`). There is also a [Python SDK](./sdk-python) (`anygas`).
 
-### 1. SDK — `@robyn/agent-kit`
+> **Legacy scope.** The packages were first published as `@robyn/*` on JSR (and `robyn-mcp` / `robyn-agent-kit` on npm). Those names stopped at 1.0.x and are no longer updated — use `@anygas/*`.
+
+### 1. SDK — `@anygas/agent-kit`
 The one-import way for an agent (or any automated system) to transact gaslessly.
 
 ```bash
-npx jsr add @robyn/agent-kit
+npx jsr add @anygas/agent-kit
 ```
 ```js
-import { RobynAgent } from '@robyn/agent-kit';
+import { RobynAgent } from '@anygas/agent-kit';
 const agent = new RobynAgent({ signer, svc });
 await agent.payAny({ token: ANY, to: merchant, amount, verifiedAsset: USDG }); // gasless pay
 await agent.crossChain({ fromChain: 8453, fromToken, amount, toChain: 42161, toToken }); // cross-chain
 ```
 
-### 2. MCP server — `@robyn/mcp`
+### 2. MCP server — `@anygas/mcp`
 Give any MCP-capable agent (Claude Desktop, Cursor, agent frameworks) Robyn's tools directly.
 
 ```bash
-npx jsr add @robyn/mcp
+npx jsr add @anygas/mcp
 ```
 ```jsonc
 {
   "mcpServers": {
     "robyn": {
       "command": "npx",
-      "args": ["-y", "robyn-mcp"],
+      "args": ["-y", "anygas-mcp"],
       "env": {
         "ROBYN_SVC": "https://api.anygas.xyz/svc",
         "ROBYN_SIGNER_KEY": "0x…"   // optional — omit for a safe read-only server
@@ -96,19 +98,19 @@ npx jsr add @robyn/mcp
   }
 }
 ```
-Tools: `robyn_mesh`, `robyn_quote`, `robyn_route_status` (no credentials) and `robyn_cross_chain` (needs a signer key).
+Read tools (no credentials): `robyn_mesh`, `robyn_quote`, `robyn_route_status`, `robyn_agent_do`, `robyn_errors`, `robyn_yield_account`, `robyn_yield_quote`. Execute tools (only registered when `ROBYN_SIGNER_KEY` is set): `robyn_cross_chain`, `robyn_agent_execute`, `robyn_yield_spend`. See the [package README](./packages/mcp) for the full table.
 
-### 3. Framework adapters — `@robyn/adapters`
+### 3. Framework adapters — `@anygas/adapters`
 The same four tools as a drop-in for the agent framework you already use.
 
 ```bash
-npx jsr add @robyn/adapters
+npx jsr add @anygas/adapters
 ```
 ```js
-import { robynTools }          from '@robyn/adapters/ai-sdk';    // Vercel AI SDK
-import { robynLangchainTools } from '@robyn/adapters/langchain'; // LangChain
-import { robynActionProvider } from '@robyn/adapters/agentkit';  // Coinbase AgentKit
-import { robynOpenAITools, robynAnthropicTools, robynDispatcher } from '@robyn/adapters/schemas'; // raw function-calling
+import { robynTools }          from '@anygas/adapters/ai-sdk';    // Vercel AI SDK
+import { robynLangchainTools } from '@anygas/adapters/langchain'; // LangChain
+import { robynActionProvider } from '@anygas/adapters/agentkit';  // Coinbase AgentKit
+import { robynOpenAITools, robynAnthropicTools, robynDispatcher } from '@anygas/adapters/schemas'; // raw function-calling
 ```
 
 ## Fees
@@ -137,9 +139,10 @@ _Build **with** Robyn: yes. Clone Robyn to cut it out: no._
 ## Repo layout
 
 ```
-packages/agent-kit/   @robyn/agent-kit — the SDK
-packages/mcp/         @robyn/mcp — the MCP server
-packages/adapters/    @robyn/adapters — framework adapters
+packages/agent-kit/   @anygas/agent-kit — the SDK
+packages/mcp/         @anygas/mcp — the MCP server
+packages/adapters/    @anygas/adapters — framework adapters
+sdk-python/           anygas — the Python SDK
 docs/                 integration guide, fee & security overview
 ```
 
@@ -147,6 +150,7 @@ docs/                 integration guide, fee & security overview
 
 - [Integration guide](./docs/integration.md)
 - [Fees & security](./docs/fees-and-security.md)
+- [Python SDK](./sdk-python/README.md)
 
 ## License
 

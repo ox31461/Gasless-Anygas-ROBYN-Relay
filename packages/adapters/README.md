@@ -9,23 +9,23 @@ Drop-in adapters that give any agent Robyn's gasless cross-chain capability acro
 Same four tools everywhere: `robyn_mesh`, `robyn_quote`, `robyn_route_status`, `robyn_cross_chain`.
 
 ```bash
-npm i anygas-adapters
+npm i anygas-adapters          # or: npx jsr add @anygas/adapters
 # + your framework: `ai`, or `@langchain/core`, or `@coinbase/agentkit` (only what you use)
 ```
 
-Import subpath per framework:
+Import subpath per framework (the examples use the npm name; with JSR, import from `@anygas/adapters/<subpath>`). `svc` defaults to `https://api.anygas.xyz/svc`, so it can be omitted:
 
 ### Vercel AI SDK
 ```js
 import { robynTools } from 'anygas-adapters/ai-sdk';
-const tools = await robynTools({ svc: 'https://<gateway>/svc', signer });   // signer optional
+const tools = await robynTools({ svc: 'https://api.anygas.xyz/svc', signer });   // signer optional
 await generateText({ model, tools, prompt: 'move 25 USDC from Base to Arbitrum' });
 ```
 
 ### LangChain
 ```js
 import { robynLangchainTools } from 'anygas-adapters/langchain';
-const tools = await robynLangchainTools({ svc: 'https://<gateway>/svc', signer });
+const tools = await robynLangchainTools({ svc: 'https://api.anygas.xyz/svc', signer });
 const agent = createReactAgent({ llm, tools });
 ```
 
@@ -33,7 +33,7 @@ const agent = createReactAgent({ llm, tools });
 ```js
 import { robynActionProvider } from 'anygas-adapters/agentkit';
 const agentkit = await AgentKit.from({ walletProvider,
-  actionProviders: [ await robynActionProvider({ svc: 'https://<gateway>/svc', signer }) ] });
+  actionProviders: [ await robynActionProvider({ svc: 'https://api.anygas.xyz/svc', signer }) ] });
 ```
 
 ### OpenAI / Anthropic (framework-free)

@@ -1,6 +1,8 @@
 # Contributing
 
-Thanks for your interest in Robyn. This repo hosts the **open (MIT) client packages** — `@robyn/agent-kit`, `@robyn/mcp`, and `@robyn/adapters` — plus docs. Contributions that make integrating Robyn easier are very welcome.
+Thanks for your interest in Robyn. This repo hosts the **open (MIT) client packages** — `@anygas/agent-kit`, `@anygas/mcp`, and `@anygas/adapters` on JSR (`anygas-*` on npm), plus the `anygas` Python SDK — and docs. Contributions that make integrating Robyn easier are very welcome.
+
+`@robyn/*` is the legacy JSR scope (stopped at 1.0.x). New docs and examples should use `@anygas/*`; a test in `packages/agent-kit/test/docs-scope.test.mjs` fails if a stale scope name creeps back into the Markdown.
 
 ## Good contributions
 
@@ -27,7 +29,7 @@ every push and pull request.
 
 ```bash
 # JS packages (Node >= 18): agent-kit, mcp, adapters
-cd packages/agent-kit && npm install && npm test
+cd packages/agent-kit && npm install && npm test   # agent-kit also runs the docs scope check
 
 # Python SDK
 cd sdk-python && pip install -e ".[test]" && pytest

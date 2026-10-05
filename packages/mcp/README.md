@@ -23,6 +23,13 @@ Give any MCP-capable agent (Claude Desktop, Cursor, agent frameworks) the abilit
 
 Read tools work with **no credentials**. The **yes** tools are only registered when `ROBYN_SIGNER_KEY` is set — otherwise the server is safely read-only and they are not listed at all.
 
+## Install
+
+```bash
+npx -y anygas-mcp          # run directly from npm (the bin is `anygas-mcp`)
+npx jsr add @anygas/mcp    # or add the JSR package to a project
+```
+
 ## Configure (Claude Desktop)
 
 ```jsonc

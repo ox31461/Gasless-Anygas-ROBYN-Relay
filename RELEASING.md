@@ -96,7 +96,7 @@ After the runs are green:
 - [ ] npm: `npm view anygas-agent-kit version` and `npm view anygas-mcp version` print the new
       versions. The npmjs.com package page shows **Provenance**, and `dist-tags.latest` is the
       new version (`npm view <pkg> dist-tags`).
-- [ ] `npx -y anygas-mcp` starts and logs `robyn-mcp connected ... (read-only)`.
+- [ ] `npx -y anygas-mcp` starts and logs `robyn-mcp connected ... (read-only)` (the log line keeps the legacy name).
 - [ ] PyPI: `https://pypi.org/project/anygas/` shows the new version. Run
       `pip install anygas==X.Y.Z` in a fresh venv, then
       `python -c "import anygas; print(anygas.__version__)"`.
@@ -109,10 +109,11 @@ After the runs are green:
   `@anygas/mcp` **1.6.0**, and PyPI already has `anygas` **1.0.0**. Publishing a lower version is
   allowed, but JSR and pip still resolve to the higher one. npm moves `latest` to whatever was
   published last. Either choose versions above those, or publish with an explicit dist-tag.
-- **JSR scope in the docs.** `jsr.json` publishes under `@anygas/*`, but README.md, `docs/` and
-  CONTRIBUTING.md still say `@robyn/*`. `@robyn/*` stopped at 1.0.1. Update the docs to the scope
-  you publish under.
-- **sdk-python README** still says "Not on PyPI yet". Update it once the PyPI release is live.
+- **JSR scope in the docs.** `jsr.json` publishes under `@anygas/*`; README.md, `docs/` and
+  CONTRIBUTING.md now say `@anygas/*` too. `@robyn/*` is the legacy scope (stopped at 1.0.1) and
+  `packages/agent-kit/test/docs-scope.test.mjs` fails if it comes back outside a "legacy" note.
+- **sdk-python README** says this SDK is not on PyPI yet and that the `anygas` name there is an older,
+  different client. Update it once a release of *this* SDK is live on PyPI.
 
 ## Downgrade guard, and two packages whose published source lives elsewhere
 

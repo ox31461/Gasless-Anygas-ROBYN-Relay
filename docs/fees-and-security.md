@@ -41,6 +41,6 @@ Only add a signer when you actually want the agent to move value.
 
 ## What's open vs. proprietary
 
-**Open (MIT, in this repo):** the three client packages — `@robyn/agent-kit`, `@robyn/mcp`, `@robyn/adapters` — and these docs.
+**Open (MIT, in this repo):** the three client packages — `@anygas/agent-kit`, `@anygas/mcp`, `@anygas/adapters` — and these docs.
 
 **Proprietary (not in this repo, not licensed here):** the Robyn relayer service, the smart contracts, and the network. See [NOTICE](../NOTICE). Integrate with Robyn freely; don't replicate or re-host it.
