@@ -101,6 +101,11 @@ test('the spend policy then refuses a stranger, an unlisted token or chain, and 
     assert.equal(reasonOf(() => g.authorize(req({ amount: '5000001' }))), 'per-day');
     const pinned = makeSpendGuard(policyFromEnv({ ROBYN_RELAYER: RELAYER, ROBYN_SPEND_LEDGER: path.join(dir, 'b.json') }));
     assert.equal(reasonOf(() => pinned.authorize(req({ spender: OTHER }))), 'relayer');
+    assert.equal(reasonOf(() => pinned.authorize(req({ spender: undefined }))), 'relayer', 'a caller that forgets the spender is still checked');
+    const yieldReq = { signer: SIGNER, chain: 8453, token: 'yield-usdc', amount: '25000000', toAddress: SIGNER, toChain: 8453 };
+    assert.equal(reasonOf(() => pinned.authorize(yieldReq)), 'relayer');
+    assert.equal(reasonOf(() => pinned.authorize({ ...yieldReq, spenderless: true })), 'passed', 'the yield Spend intent names no spender');
+    assert.equal(reasonOf(() => pinned.authorize({ ...yieldReq, spenderless: 'yes' })), 'relayer', 'only a literal true opts out');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -111,6 +116,8 @@ test('every signing tool asks the checks before it signs', () => {
   order(handler('robyn_cross_chain'), 'spendRefusal(', 'if (refusedX) return text(refusedX)', 'signTypedData(');
   order(handler('robyn_agent_execute'), 'checkPermit2Request(sr', 'spendRefusal(', 'if (refusedA) return text(refusedA)', 'signTypedData(');
   order(handler('robyn_yield_spend'), 'spendRefusal(', 'if (refusedY) return text(refusedY)', 'signTypedData(');
+  assert.match(handler('robyn_yield_spend'), /spenderless: true/);
+  assert.equal((src.match(/spenderless: true/g) || []).length, 1, 'only the yield tool skips the relayer comparison');
   assert.equal((src.match(/signTypedData\(/g) || []).length, 3, 'no other signing site');
   assert.match(handler('robyn_agent_execute'), /toChain: checked\.toChain \?\? '', toToken: checked\.toToken \?\? ''/);
   const ax = handler('robyn_agent_execute');

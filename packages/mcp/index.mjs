@@ -160,8 +160,7 @@ server.registerTool('robyn_agent_execute',
     // deadline, a submit body naming the same chain/token/amount, the agent's own fields unchanged, then the spend policy.
     let checked;
     try {
-      const expectSpender = POLICY.relayer || (await GET('/api/route/chains')).relayer;
-      checked = checkPermit2Request(sr, { spender: expectSpender, allowedTokens: POLICY.allowedTokens, request: { fromChain: a.fromChain, token: a.token, amount: a.amount, toChain: a.toChain, toAddress: a.toAddress || w.address } });
+      checked = checkPermit2Request(sr, { spender: POLICY.relayer, allowedTokens: POLICY.allowedTokens, request: { fromChain: a.fromChain, token: a.token, amount: a.amount, toChain: a.toChain, toAddress: a.toAddress || w.address } });
     } catch (e) { return text(refusal(e)); }
     const refusedA = spendRefusal({ signer: w.address, chain: checked.chainId, token: checked.token, amount: checked.amount, toAddress: checked.toAddress, toChain: checked.toChain ?? '', toToken: checked.toToken ?? '', spender: sr.eip712.value.spender });
     if (refusedA) return text(refusedA);
@@ -194,7 +193,7 @@ server.registerTool('robyn_yield_spend',
     const w = new ethers.Wallet(KEY); let src;
     try { src = Number(BigInt(String(a.srcChain).trim())); if (!Number.isSafeInteger(src) || src <= 0) throw new Error('chain'); }
     catch (e) { return text({ ok: false, errorCode: 'SPEND_POLICY', reason: 'input', error: 'srcChain must be an EVM chain id; nothing was signed' }); }
-    const refusedY = spendRefusal({ signer: w.address, chain: src, token: 'yield-usdc', amount: a.amount, toAddress: a.toAddress || w.address, toChain: a.toChain ?? src });
+    const refusedY = spendRefusal({ signer: w.address, chain: src, token: 'yield-usdc', amount: a.amount, toAddress: a.toAddress || w.address, toChain: a.toChain ?? src, spenderless: true });   // the Spend intent names no spender
     if (refusedY) return text(refusedY);
     const intent = { agent: w.address, srcChain: src, amount: String(BigInt(a.amount)), toChain: Number(BigInt(String(a.toChain ?? src).trim())), toAddress: a.toAddress || w.address, nonce: String(Date.now()) + String(Math.floor(Math.random() * 1e6)), deadline: String(Math.floor(Date.now() / 1000) + 3600) };
     const types = { Spend: [{ name: 'agent', type: 'address' }, { name: 'srcChain', type: 'uint256' }, { name: 'amount', type: 'uint256' }, { name: 'toChain', type: 'uint256' }, { name: 'toAddress', type: 'address' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' }] };

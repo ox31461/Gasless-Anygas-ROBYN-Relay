@@ -78,7 +78,9 @@ export function tokenKey(token) {
 }
 const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);
 
-/// makeSpendGuard(policy, { fs, now }) -> { authorize({ signer, chain, token, amount, toAddress, toChain?, toToken?, spender? }) }
+/// makeSpendGuard(policy, { fs, now }) -> { authorize({ signer, chain, token, amount, toAddress, toChain?, toToken?, spender?, spenderless? }) }
+///   spenderless: true only for a signature that names no spender at all (the yield account's Spend intent); it skips
+///   the relayer comparison and nothing else. An omitted spender without it is refused when ROBYN_RELAYER is set.
 /// authorize() throws SpendPolicyError (nothing recorded) or records the amount and returns { day, spentToday }.
 export function makeSpendGuard(policy, { fs = nodeFs, now = () => Date.now() } = {}) {
   const readLedger = () => {
@@ -99,7 +101,7 @@ export function makeSpendGuard(policy, { fs = nodeFs, now = () => Date.now() } =
     fs.renameSync(tmp, policy.ledgerPath);
   };
   return {
-    authorize({ signer, chain, token, amount, toAddress, toChain, toToken, spender }) {
+    authorize({ signer, chain, token, amount, toAddress, toChain, toToken, spender, spenderless = false }) {
       let amt;
       if (!UINT.test(String(amount))) throw new SpendPolicyError('amount must be a whole number of base units, digits only', 'amount');
       amt = BigInt(String(amount));
@@ -120,7 +122,7 @@ export function makeSpendGuard(policy, { fs = nodeFs, now = () => Date.now() } =
           throw new SpendPolicyError('refused: destination token ' + t + ' is not in ROBYN_ALLOWED_SYMBOLS or ROBYN_ALLOWED_TOKENS; nothing was signed', 'to-token');
         }
       }
-      if (policy.relayer && String(spender || '').toLowerCase() !== policy.relayer) {
+      if (policy.relayer && spenderless !== true && String(spender || '').toLowerCase() !== policy.relayer) {
         throw new SpendPolicyError('refused: the router reported relayer ' + spender + ', not ROBYN_RELAYER; nothing was signed', 'relayer');
       }
       if (policy.maxPerCall !== null && amt > policy.maxPerCall) {
